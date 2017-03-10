@@ -68,19 +68,19 @@ class ffmpeg_build():
         self.fileListGz = []
 
 
-        self.xz = 'xz-5.2.2'
+        self.xz = 'xz-5.2.3'
         self.downloadListGz.append(self.xz)
 
         self.yasm = 'yasm-1.3.0'
         self.downloadListGz.append(self.yasm)
 
-        self.openssl = 'openssl-1.0.2j'
+        self.openssl = 'openssl-1.0.2k'
         self.downloadList.append(self.openssl)
 
-        self.cmake = 'cmake-3.6.3'
+        self.cmake = 'cmake-3.7.2'
         self.downloadList.append(self.cmake)
 
-        self.zlib = 'zlib-1.2.8'
+        self.zlib = 'zlib-1.2.11'
         self.downloadList.append(self.zlib)
 
         self.bzip2 = 'bzip2-1.0.6'
@@ -92,7 +92,7 @@ class ffmpeg_build():
         #self.snappy = 'snappy-1.1.3'
         #self.downloadList.append(self.snappy)
 
-        self.libpng = 'libpng-1.6.26'
+        self.libpng = 'libpng-1.6.28'
         self.downloadList.append(self.libpng)
 
         self.openjpeg = 'openjpeg-1.5.2'  # ffmpeg works with 1.x, not 2.x
@@ -110,10 +110,10 @@ class ffmpeg_build():
         self.libtheora = 'libtheora-1.1.1'
         self.downloadList.append(self.libtheora)
 
-        self.libvpx = 'libvpx-1.6.0'
+        self.libvpx = 'libvpx-1.6.1'
         self.downloadList.append(self.libvpx)
 
-        self.speex = 'speex-1.2rc2'
+        self.speex = 'speex-1.2.0'
         self.downloadList.append(self.speex)
 
         self.lame = 'lame-3.99.5'
@@ -128,7 +128,7 @@ class ffmpeg_build():
         self.wavpack = 'wavpack-4.80.0'
         self.downloadList.append(self.wavpack)
 
-        self.fdkaac = 'fdk-aac-0.1.4'
+        self.fdkaac = 'fdk-aac-0.1.5'
         self.downloadList.append(self.fdkaac)
 
         self.x264 = 'https://git.videolan.org/git/x264.git'
@@ -143,37 +143,38 @@ class ffmpeg_build():
         self.downloadList.append(self.xvid)
         self.downloadAuxList.append('xvid_Makefile.patch')
 
-        self.nvenc = 'nvidia_video_sdk_7.0.1'
+        self.nvenc = 'nvidia_video_sdk_7.1.9'
         self.downloadList.append(self.nvenc)
 
-        self.blackmagic = 'Blackmagic_DeckLink_SDK_10.8'
+        self.blackmagic = 'Blackmagic_DeckLink_SDK_10.8.5'
         self.downloadList.append(self.blackmagic)
 
         self.libgsm = 'libgsm-1.0.13-4'
         self.downloadList.append(self.libgsm)
 
-        self.libilbc = 'libilbc-20141214-git-ef04ebe'
+        #self.libilbc = 'libilbc-20141214-git-ef04ebe'
+        self.libilbc = 'libilbc-2.0.2'
         self.downloadList.append(self.libilbc)
 
-        self.webp = 'libwebp-0.5.1'
+        self.webp = 'libwebp-0.6.0'
         self.downloadList.append(self.webp)
 
-        self.opus = 'opus-1.1.3'
+        self.opus = 'opus-1.1.4'
         self.downloadList.append(self.opus)
 
-        self.kvazaar = 'kvazaar-1.0.0'
+        self.kvazaar = 'kvazaar-1.1.0'
         self.downloadList.append(self.kvazaar)
 
         self.expat = 'expat-2.2.0'
         self.downloadList.append(self.expat)
 
-        self.freetype = 'freetype-2.7'
+        self.freetype = 'freetype-2.7.1'
         self.downloadList.append(self.freetype)
 
         self.fontconfig = 'fontconfig-2.12.1'
         self.downloadList.append(self.fontconfig)
 
-        self.libebur128 = 'libebur128-1.2.0'
+        self.libebur128 = 'libebur128-1.2.2'
         self.downloadList.append(self.libebur128)
 
         self.faac = 'faac-1.28'
