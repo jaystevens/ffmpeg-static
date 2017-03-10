@@ -174,9 +174,6 @@ class ffmpeg_build():
         self.fontconfig = 'fontconfig-2.12.1'
         self.downloadList.append(self.fontconfig)
 
-        self.libebur128 = 'libebur128-1.2.2'
-        self.downloadList.append(self.libebur128)
-
         self.faac = 'faac-1.28'
         self.downloadList.append(self.faac)
 
@@ -665,19 +662,6 @@ class ffmpeg_build():
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
 
-    def b_libebur128(self):
-        print('\n*** Building libebur128 ***\n')
-        os.chdir(os.path.join(self.BUILD_DIR, self.libebur128))
-        os.system('mkdir build')
-        os.chdir(os.path.join(self.BUILD_DIR, self.libebur128, 'build'))
-        os.putenv('LDFLAGS', self.ENV_LDFLAGS_STD)
-        if self.build_static is True:
-            os.system('cmake -DCMAKE_BUILD_TYPE=Release -Wno-dev -DCMAKE_INSTALL_PREFIX="%s" -DBUILD_STATIC_LIBS:bool=on -DWITH_STATIC_PIC:bool=on ..' % self.TARGET_DIR)
-        else:
-            os.system('cmake -DCMAKE_BUILD_TYPE=Release -Wno-dev -DCMAKE_INSTALL_PREFIX="%s" ..' % self.TARGET_DIR)
-        os.system('make -j %s && make install' % self.cpuCount)
-        os.putenv('LDFLAGS', self.ENV_LDFLAGS)
-
     def b_faac(self):
         print('\n*** Building faac ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.faac))
@@ -742,7 +726,6 @@ class ffmpeg_build():
         confcmd += ' --enable-libwebp'
         confcmd += ' --enable-libfreetype'
         confcmd += ' --enable-libfontconfig'
-        confcmd += ' --enable-libebur128'
         confcmd += ' --enable-libkvazaar'
         # confcmd += ' --enable-librtmp'
         # confcmd += ' --enable-libsnappy'
@@ -828,7 +811,7 @@ class ffmpeg_build():
         for item in ['ffmpeg', 'ffprobe', 'tiffcp', 'tiffinfo', 'qt-faststart']:
             os.system('cp -f {0} ./'.format(os.path.join(self.TARGET_DIR, 'bin', item)))
         if self.build_static is False:
-            for item in ['libx265.so.85', 'libvpx.so.4', 'libvorbisenc.so.2', 'libvorbis.so.0', 'libtwolame.so.0', 'libtheoraenc.so.1', 'libtheoradec.so.1', 'libspeex.so.1', 'libopenjpeg.so.1', 'libmp3lame.so.0', 'liblzma.so.5', 'libz.so.1', 'libssl.so.1.0.0', 'libcrypto.so.1.0.0', 'libwebp.so.6', 'libsoxr.so.0', 'libilbc.so.2', 'libfdk-aac.so.1', 'libebur128.so.1',]:
+            for item in ['libx265.so.85', 'libvpx.so.4', 'libvorbisenc.so.2', 'libvorbis.so.0', 'libtwolame.so.0', 'libtheoraenc.so.1', 'libtheoradec.so.1', 'libspeex.so.1', 'libopenjpeg.so.1', 'libmp3lame.so.0', 'liblzma.so.5', 'libz.so.1', 'libssl.so.1.0.0', 'libcrypto.so.1.0.0', 'libwebp.so.6', 'libsoxr.so.0', 'libilbc.so.2', 'libfdk-aac.so.1', ]:
                 os.system('cp -f {0} ./'.format(os.path.join(self.TARGET_DIR, 'lib', item)))
         os.system('strip *')
         os.chdir(self.ENV_ROOT)
@@ -887,7 +870,6 @@ class ffmpeg_build():
         self.b_expat()
         self.b_freetype()
         self.b_fontconfig()
-        self.b_libebur128()
         self.b_blackmagic()
         if self.nonfree:
             self.b_fdkaac()
