@@ -534,6 +534,7 @@ class ffmpeg_build():
     def b_fdkaac(self):
         print('\n*** Building fdk-aac ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.fdkaac))
+        os.system('./autogen.sh')
         cfgcmd = './configure --prefix=%s' % (self.TARGET_DIR)
         if self.build_static is True:
             cfgcmd += ' --disable-shared'
@@ -620,6 +621,7 @@ class ffmpeg_build():
     def b_webp(self):
         print('\n*** Building webp ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.webp))
+        os.system('./autogen.sh')
         cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
         if self.build_static is True:
             cfgcmd += ' --disable-shared'
