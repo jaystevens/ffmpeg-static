@@ -74,6 +74,9 @@ class ffmpeg_build():
         self.yasm = 'yasm-1.3.0'
         self.downloadListGz.append(self.yasm)
 
+        self.nasm = 'nasm-2.13.01'
+        self.downloadList.append(self.nasm)
+
         self.openssl = 'openssl-1.0.2l'
         self.downloadList.append(self.openssl)
 
@@ -417,6 +420,13 @@ class ffmpeg_build():
         print('\n*** Building ncurses ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.ncurses))
         os.system('./configure --with-termlib --with-ticlib --prefix=%s' % self.TARGET_DIR)
+        os.system('make -j %s && make install' % self.cpuCount)
+
+    def b_nasm(self):
+        print('\n*** Building nasm ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.nasm))
+        cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+        os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
 
     def b_openssl(self):
@@ -857,6 +867,7 @@ class ffmpeg_build():
         self.f_repo_deploy()
 
     def go_main(self):
+        self.b_nasm()
         self.b_openssl()
         self.b_cmake()
         self.b_zlib()
