@@ -20,7 +20,7 @@ Build dependencies (WIP)
 
     # Fedora 23 / Redhat 7x / Centos 7x
     $ yum groupinstall "Development Tools"
-    $ yum install git glibc-static libstdc++-static cmake 
+    $ yum install git glibc-static libstdc++-static cmake gperf
 
     # Debian & Ubuntu
     $ apt-get install build-essential cmake python autoconf

@@ -74,10 +74,10 @@ class ffmpeg_build():
         self.yasm = 'yasm-1.3.0'
         self.downloadListGz.append(self.yasm)
 
-        self.openssl = 'openssl-1.0.2k'
+        self.openssl = 'openssl-1.0.2l'
         self.downloadList.append(self.openssl)
 
-        self.cmake = 'cmake-3.7.2'
+        self.cmake = 'cmake-3.9.1'
         self.downloadList.append(self.cmake)
 
         self.zlib = 'zlib-1.2.11'
@@ -92,7 +92,7 @@ class ffmpeg_build():
         #self.snappy = 'snappy-1.1.3'
         #self.downloadList.append(self.snappy)
 
-        self.libpng = 'libpng-1.6.28'
+        self.libpng = 'libpng-1.6.30'
         self.downloadList.append(self.libpng)
 
         self.openjpeg = 'openjpeg-1.5.2'  # ffmpeg works with 1.x, not 2.x
@@ -159,22 +159,25 @@ class ffmpeg_build():
         self.webp = 'libwebp-0.6.0'
         self.downloadList.append(self.webp)
 
-        self.opus = 'opus-1.1.4'
+        self.opus = 'opus-1.2.1'
         self.downloadList.append(self.opus)
 
         self.kvazaar = 'kvazaar-1.1.0'
         self.downloadList.append(self.kvazaar)
 
-        self.expat = 'expat-2.2.0'
+        self.expat = 'expat-2.2.4'
         self.downloadList.append(self.expat)
 
-        self.freetype = 'freetype-2.7.1'
+        self.gperf = 'gperf-3.1'
+        self.downloadList.append(self.gperf)
+
+        self.freetype = 'freetype-2.8'
         self.downloadList.append(self.freetype)
 
-        self.fontconfig = 'fontconfig-2.12.1'
+        self.fontconfig = 'fontconfig-2.12.4'
         self.downloadList.append(self.fontconfig)
 
-        self.faac = 'faac-1.28'
+        self.faac = 'faac-1.29.7.2'
         self.downloadList.append(self.faac)
 
         self.ffmpeg = 'git://source.ffmpeg.org/ffmpeg.git'
@@ -646,10 +649,21 @@ class ffmpeg_build():
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
 
+    def b_gperf(self):
+        print('\n*** Building gperf ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.gperf))
+        cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+        if self.build_static is True:
+            cfgcmd += ' '
+        os.system(cfgcmd)
+        os.system('make -j %s && make install' % self.cpuCount)
+
     def b_freetype(self):
         print('\n*** Building freetype ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.freetype))
         cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+        # harfbuzz is a bitch to compile
+        cfgcmd += ' --with-harfbuzz=no'
         if self.build_static is True:
             cfgcmd += ' --enable-shared=no'
         os.system(cfgcmd)
@@ -870,6 +884,7 @@ class ffmpeg_build():
         self.b_opus()
         self.b_kvazaar()
         self.b_expat()
+        self.b_gperf()
         self.b_freetype()
         self.b_fontconfig()
         self.b_blackmagic()
