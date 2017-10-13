@@ -80,7 +80,7 @@ class ffmpeg_build():
         self.openssl = 'openssl-1.0.2l'
         self.downloadList.append(self.openssl)
 
-        self.cmake = 'cmake-3.9.1'
+        self.cmake = 'cmake-3.9.4'
         self.downloadList.append(self.cmake)
 
         self.zlib = 'zlib-1.2.11'
@@ -95,7 +95,7 @@ class ffmpeg_build():
         #self.snappy = 'snappy-1.1.3'
         #self.downloadList.append(self.snappy)
 
-        self.libpng = 'libpng-1.6.30'
+        self.libpng = 'libpng-1.6.32'
         self.downloadList.append(self.libpng)
 
         self.openjpeg = 'openjpeg-1.5.2'  # ffmpeg works with 1.x, not 2.x
@@ -174,7 +174,7 @@ class ffmpeg_build():
         self.gperf = 'gperf-3.1'
         self.downloadList.append(self.gperf)
 
-        self.freetype = 'freetype-2.8'
+        self.freetype = 'freetype-2.8.1'
         self.downloadList.append(self.freetype)
 
         self.fontconfig = 'fontconfig-2.12.4'
