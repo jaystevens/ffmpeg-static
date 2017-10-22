@@ -252,17 +252,20 @@ class ffmpeg_build:
     def cflags_reset(self):
         os.putenv('CFLAGS', self.ENV_CFLAGS)
         os.putenv('CPPFLAGS', self.ENV_CFLAGS)
+        #os.putenv('CXXFLAGS', self.ENV_CFLAGS)
         os.system('hash -r')
 
     def cflags_reset_gcc(self):
         os.putenv('CFLAGS', self.ENV_CFLAGS_GCC)
-        os.putenv('CFLAGS', self.ENV_CFLAGS_GCC)
+        os.putenv('CPPFLAGS', self.ENV_CFLAGS_GCC)
+        #os.putenv('CXXFLAGS', self.ENV_CFLAGS_GCC)
         os.system('hash -r')
 
     @staticmethod
     def cflags_clear():
         os.putenv('CFLAGS', '')
         os.putenv('CPPFLAGS', '')
+        #os.putenv('CXXFLAGS', '')
         os.system('hash -r')
 
     def setupDIR(self):
@@ -634,10 +637,19 @@ class ffmpeg_build:
         os.chdir(os.path.join(self.BUILD_DIR, self.soxr))
         os.system('mkdir Release')
         os.chdir(os.path.join(self.BUILD_DIR, self.soxr, 'Release'))
+        b_cmd = 'cmake'
+        b_cmd +=' -DCMAKE_BUILD_TYPE=Release'
+        b_cmd +=' -Wno-dev'
+        b_cmd +=' -DCMAKE_INSTALL_PREFIX="%s"' % self.TARGET_DIR
+        b_cmd +=' -DHAVE_WORDS_BIGENDIAN_EXITCODE=0'
+        b_cmd +=' -DWITH_OPENMP=0'  # openMP?
+        b_cmd +=' -DBUILD_TESTS=0'
+        b_cmd +=' -DBUILD_EXAMPLES=0'
         if self.build_static is True:
-            os.system('cmake -DCMAKE_BUILD_TYPE=Release -Wno-dev -DCMAKE_INSTALL_PREFIX="%s" -DBUILD_SHARED_LIBS:bool=off ..' % self.TARGET_DIR)
-        else:
-            os.system('cmake -DCMAKE_BUILD_TYPE=Release -Wno-dev -DCMAKE_INSTALL_PREFIX="%s" ..' % self.TARGET_DIR)
+            b_cmd +=' -DBUILD_SHARED_LIBS=0'
+        b_cmd +=' ..'
+        print('b_cmd: {}'.format(b_cmd))
+        os.system(b_cmd)
         os.system('make -j %s && make install' % self.cpuCount)
         if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libsoxr.a')):
             print('\nSOXR BUILD FAILED')
@@ -762,21 +774,21 @@ class ffmpeg_build:
         os.system('git checkout jason')
 
         # modify env
-
-        ENV_CFLAGS_NEW = '%s' % self.ENV_CFLAGS
+        ENV_CFLAGS_FF = self.ENV_CFLAGS
         if self.build_static is True:
-            ENV_CFLAGS_NEW += ' --static'
-        os.putenv('CFLAGS', ENV_CFLAGS_NEW)
-        os.putenv('CPPFLAGS', ENV_CFLAGS_NEW)
-        ENV_LDFLAGS_NEW = self.ENV_LDFLAGS
-        ENV_LDFLAGS_NEW += ' -fopenmp'  # openmp is needed by soxr
+            ENV_CFLAGS_FF += ' --static'
+        os.putenv('CFLAGS', ENV_CFLAGS_FF)
+        os.putenv('CPPFLAGS', ENV_CFLAGS_FF)
+        ENV_LDFLAGS_FF = self.ENV_LDFLAGS
+        ENV_LDFLAGS_FF += ' -fopenmp -lm'  # openmp is needed by soxr
         #ENV_LDFLAGS_NEW += ' -lstdc++'  # stdc++ is needed by snappy
-        os.putenv('LDFLAGS', ENV_LDFLAGS_NEW)
+        os.putenv('LDFLAGS', ENV_LDFLAGS_FF)
+        os.system('hash -r')
 
         os.system('export')
 
-        confcmd = ''
-        confcmd += './configure --prefix=%s' % self.TARGET_DIR
+        confcmd = './configure'
+        confcmd += ' --prefix=%s' % self.TARGET_DIR
         confcmd += ' --extra-version=static'
         if self.build_static is True:
             confcmd += ' --pkg-config-flags="--static"'
@@ -806,7 +818,7 @@ class ffmpeg_build:
         confcmd += ' --enable-libvpx'
         confcmd += ' --enable-libx264'
         confcmd += ' --enable-libx265'
-        #confcmd += ' --enable-libsoxr'         # broken gcc
+        confcmd += ' --enable-libsoxr'         # broken gcc
         #confcmd += ' --enable-libtwolame'      # broken gcc
         confcmd += ' --enable-libfreetype'
         confcmd += ' --enable-libfontconfig'
@@ -817,7 +829,7 @@ class ffmpeg_build:
         # confcmd += ' --disable-devices'
         # confcmd += ' --enable-lto'
         confcmd += ' --enable-hardcoded-tables'
-        confcmd += ' --extra-cflags="{}"'.format(ENV_CFLAGS_NEW)
+        #confcmd += ' --extra-cflags="{}"'.format(ENV_CFLAGS_NEW)
         if self.nonfree:
             confcmd += ' --enable-libfdk-aac'
             confcmd += ' --enable-nvenc'
@@ -955,7 +967,8 @@ if __name__ == '__main__':
         ffx.go_gcc()
     elif args.do_test is True:
         os.system('gcc --version')
-        ffx.build_openjpeg()
+        ffx.build_soxr()
+        #ffx.build_openjpeg()
         #ffmpegb.b_lame()
         #ffmpegb.b_x265()
     else:
