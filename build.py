@@ -32,10 +32,11 @@ class ffmpeg_build():
     # TODO - check for library file output, so we can stop build on failure
     # TODO - have libraries build both shared and static?
 
-    def __init__(self, nonfree=False, cflags='', build_static=True):
+    def __init__(self, nonfree=False, cflags='', build_static=True, bargs=None):
         self.nonfree = nonfree
         self.cflagsopt = cflags
         self.build_static = build_static
+        self.bargs = bargs
 
         self.web_server = 'http://www.ghosttoast.com/pub/ffmpeg'
 
@@ -45,19 +46,20 @@ class ffmpeg_build():
         self.setup_folder_vars()
         self.setup_env_vars()
 
-    # print env
-    #os.system('export 2>/dev/null')
 
-    #cflagsopt = ''
-    # native
-    #cflagsopt = '-march=native'
-    #cflagsopt = '-march=native -fPIC'
-    # dcs24 tape2
-    #cflagsopt = '-march=core2 -msse4.1'
-    #cflagsopt = '-march=core2 -msse4.1 -fPIC'
-    # ts
-    #cflagsopt = '-march=corei7'
-    #clfagsopt = '-march=corei7 -fPIC'
+        # print env
+        #os.system('export 2>/dev/null')
+
+        # native
+        #self.cflagsopt += ' -march=native -mtune=native'
+        # corei7
+        self.cflagsopt += ' -march=corei7 -mtune=corei7'
+        # corei7 + avx
+        #self.cflagsopt += ' -march=corei7 -mtune=corei7-avx'
+
+        # GCC Cflags
+        self.cflags_gcc = '-march=corei7 -mtune=corei7 -O3'
+
 
     def app_list(self):
         self.downloadList = []
@@ -98,7 +100,8 @@ class ffmpeg_build():
         self.libpng = 'libpng-1.6.32'
         self.downloadList.append(self.libpng)
 
-        self.openjpeg = 'openjpeg-1.5.2'  # ffmpeg works with 1.x, not 2.x
+        #self.openjpeg = 'openjpeg-1.5.2'  # ffmpeg works with 1.x, not 2.x
+        self.openjpeg = 'openjpeg-2.3.0'
         self.downloadList.append(self.openjpeg)
 
         self.libtiff = 'tiff-4.0.6'
@@ -146,7 +149,7 @@ class ffmpeg_build():
         self.downloadList.append(self.xvid)
         self.downloadAuxList.append('xvid_Makefile.patch')
 
-        self.nvenc = 'nvidia_video_sdk_7.1.9'
+        self.nvenc = 'nvidia_video_sdk_8.0.14'
         self.downloadList.append(self.nvenc)
 
         self.blackmagic = 'Blackmagic_DeckLink_SDK_10.8.5'
@@ -165,8 +168,8 @@ class ffmpeg_build():
         self.opus = 'opus-1.2.1'
         self.downloadList.append(self.opus)
 
-        self.kvazaar = 'kvazaar-1.1.0'
-        self.downloadList.append(self.kvazaar)
+        #self.kvazaar = 'kvazaar-1.1.0'
+        #self.downloadList.append(self.kvazaar)
 
         self.expat = 'expat-2.2.4'
         self.downloadList.append(self.expat)
@@ -180,10 +183,36 @@ class ffmpeg_build():
         self.fontconfig = 'fontconfig-2.12.4'
         self.downloadList.append(self.fontconfig)
 
-        self.faac = 'faac-1.29.7.2'
-        self.downloadList.append(self.faac)
+        #self.faac = 'faac-1.29.7.2'
+        #self.downloadList.append(self.faac)
 
-        self.ffmpeg = 'git://source.ffmpeg.org/ffmpeg.git'
+        self.gcc_binutils = 'binutils-2.29.1'
+        self.downloadList.append(self.gcc_binutils)
+
+        self.gcc_glibc = 'glibc-2.26'
+        self.downloadList.append(self.gcc_glibc)
+
+        self.gcc_mpfr = 'mpfr-3.1.6'
+        self.downloadList.append(self.gcc_mpfr)
+
+        self.gcc_gmp = 'gmp-6.1.2'
+        self.downloadList.append(self.gcc_gmp)
+
+        self.gcc_mpc = 'mpc-1.0.3'
+        self.downloadList.append(self.gcc_mpc)
+
+        self.gcc_isl = 'isl-0.18'
+        self.downloadList.append(self.gcc_isl)
+
+        self.gcc_cloog = 'cloog-0.18.4'
+        self.downloadList.append(self.gcc_cloog)
+
+        self.gcc_gcc = 'gcc-7.2.0'
+        self.downloadList.append(self.gcc_gcc)
+
+
+        #self.ffmpeg = 'git://source.ffmpeg.org/ffmpeg.git'
+        self.ffmpeg = 'https://bitbucket.org/jaystevens/ffmpeg.git'
         self.gitList.append(['ffmpeg', self.ffmpeg])
 
         self.ffmbc = 'https://github.com/bcoudurier/FFmbc.git'
@@ -204,6 +233,7 @@ class ffmpeg_build():
         self.BUILD_DIR = os.path.join(self.ENV_ROOT, 'compile')
         self.BUILD_GIT_DIR = os.path.join(self.ENV_ROOT, 'sourcegit')
         self.TAR_DIR = os.path.join(self.ENV_ROOT, 'sourcetar')
+        self.GCC_DIR = os.path.join(self.ENV_ROOT, 'gccbuild')
 
         self.OUT_FOLDER = 'output'
         self.OUT_DIR = os.path.join(self.ENV_ROOT, self.OUT_FOLDER)
@@ -214,25 +244,48 @@ class ffmpeg_build():
         self.ENV_LD_ORIG = os.getenv('LD_LIBRARY_PATH')
         #if sys.platform.startswith('darwin'):  # TODO - fix darwin vars
         #    addpath += ':/opt/local/bin'
-        os.putenv('PATH', '%s:%s' % (os.path.join(self.TARGET_DIR, 'bin'), self.ENV_PATH_ORIG))
-        os.putenv('LD_LIBRARY_PATH', '%s:%s' % (os.path.join(self.TARGET_DIR, 'lib'), self.ENV_LD_ORIG))
+
+        # PATH
+        PATH_GCC_BIN = os.path.join(self.GCC_DIR, 'bin')
+        PATH_TARGET_BIN = os.path.join(self.TARGET_DIR, 'bin')
+        os.putenv('PATH', '%s:%s:%s' % (PATH_GCC_BIN, PATH_TARGET_BIN, self.ENV_PATH_ORIG))
+
+        # LD_LIBRARY_PATH
+        PATH_GCC_LIB = os.path.join(self.GCC_DIR, 'lib')
+        PATH_GCC_LIB64 = os.path.join(self.GCC_DIR, 'lib64')
+        PATH_TARGET_LIB = os.path.join(self.TARGET_DIR, 'lib')
+        os.putenv('LD_LIBRARY_PATH', '%s:%s:%s:%s' % (PATH_GCC_LIB, PATH_GCC_LIB64, PATH_TARGET_LIB, self.ENV_LD_ORIG))
+
+        # PKG CONFIG
         os.putenv('PKG_CONFIG_PATH', os.path.join(self.TARGET_DIR, 'lib', 'pkgconfig'))
-        self.ENV_CFLAGS = '-I%s' % (os.path.join(self.TARGET_DIR, 'include'),)
+
+        # CFLAG
+        self.ENV_CFLAGS_STD = ''
+        self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.GCC_DIR, 'include')
+        self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.TARGET_DIR, 'include')
+        self.ENV_CFLAGS_STD += ' %s' % self.cflagsopt
+        self.ENV_CFLAGS_STD = self.ENV_CFLAGS_STD.strip()
+        self.ENV_CFLAGS = self.ENV_CFLAGS_STD
         os.putenv('CFLAGS', self.ENV_CFLAGS)
         os.putenv('CPPFLAGS', self.ENV_CFLAGS)
-        self.ENV_LDFLAGS_STD = ''
-        self.ENV_LDFLAGS_STD += '-L%s' % os.path.join(self.TARGET_DIR, 'lib')
-        self.ENV_LDFLAGS_STATIC = ' -static -static-libgcc -static-libstdc++'
 
+        # LDFLAGS
+        self.ENV_LDFLAGS_STD = ''
+        self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.GCC_DIR, 'lib')
+        self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.GCC_DIR, 'lib64')
+        self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.TARGET_DIR, 'lib')
+        self.ENV_LDFLAGS_STD = self.ENV_LDFLAGS_STD.strip()
         self.ENV_LDFLAGS = self.ENV_LDFLAGS_STD
         if self.build_static is True:
-            self.ENV_LDFLAGS += self.ENV_LDFLAGS_STATIC
-
+            self.ENV_LDFLAGS += ' -static -static-libgcc -static-libstdc++'
         os.putenv('LDFLAGS', self.ENV_LDFLAGS)
+
+        # EXPORT
+        os.system('hash -r')
         os.system('export')
 
     def setupDIR(self):
-        for item in [self.ENV_ROOT, self.TARGET_DIR, self.BUILD_DIR, self.BUILD_GIT_DIR, self.TAR_DIR, self.OUT_DIR]:
+        for item in [self.ENV_ROOT, self.TARGET_DIR, self.BUILD_DIR, self.BUILD_GIT_DIR, self.TAR_DIR, self.OUT_DIR, self.GCC_DIR]:
             os.system('mkdir -p %s' % item)
         old_dir = os.getcwd()
         os.chdir(self.TARGET_DIR)
@@ -259,12 +312,16 @@ class ffmpeg_build():
         os.system('rm -f %s.tar' % self.OUT_DIR)
         os.system('rm -f %s.tar.xz' % self.OUT_DIR)
 
+    def cleanGCC_DIR(self):
+        os.system('rm -rf %s' % self.GCC_DIR)
+
     def cleanALL(self):
         self.cleanTARGET_DIR()
         self.cleanBUILD_DIR()
         self.cleanTAR_DIR()
         self.cleanOUT_DIR()
         self.cleanOUT_DIR_FILES()
+        #self.cleanGCC_DIR()
 
     @staticmethod
     def prewarn():
@@ -363,17 +420,46 @@ class ffmpeg_build():
         print('\n*** Syncinig Hard Drive ***\n')
         os.system('sync')
 
+    def b_gcc_binutils(self):
+        print('\n*** Building gcc binutils ***\n')
+        # use basic cflags
+        os.putenv('CFLAGS', self.cflags_gcc)
+        os.putenv('CPPFLAGS', self.cflags_gcc)
+        os.chdir(os.path.join(self.BUILD_DIR, self.gcc_binutils))
+        os.system('./configure --prefix=%s' % self.GCC_DIR)
+        os.system('make -j %s && make install' % self.cpuCount)
+
+
+    def b_gcc_gcc(self):
+        print('\n*** Building gcc ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.gcc_gcc))
+        os.system('ln -sf %s mpfr' % (os.path.join(self.BUILD_DIR, self.gcc_mpfr)))
+        os.system('ln -sf %s gmp' % (os.path.join(self.BUILD_DIR, self.gcc_gmp)))
+        os.system('ln -sf %s mpc' % (os.path.join(self.BUILD_DIR, self.gcc_mpc)))
+        os.system('ln -sf %s isl' % (os.path.join(self.BUILD_DIR, self.gcc_isl)))
+        os.system('ln -sf %s cloog' % (os.path.join(self.BUILD_DIR, self.gcc_cloog)))
+        os.system('mkdir builddir')
+        os.chdir(os.path.join(self.BUILD_DIR, self.gcc_gcc, 'builddir'))
+        os.system('../configure --prefix=%s --enable-languages=c,c++,fortran --disable-multilib' % self.GCC_DIR)
+        os.system('make -j %s && make install' % self.cpuCount)
+
     def b_yasm(self):
         print('\n*** Building yasm ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.yasm))
         os.system('./configure --prefix=%s' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libyasm.a')):
+            print('\nYASM BUILD FAILED')
+            sys.exit(1)
 
     def b_xz(self):
         print('\n*** Building xz/liblzma ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.xz))
         os.system('./configure --prefix=%s' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'liblzma.a')):
+            print('\nXZ/LZMA BUILD FAILED')
+            sys.exit(1)
 
     def b_curl(self):
         print('\n*** Building curl ***\n')
@@ -400,6 +486,9 @@ class ffmpeg_build():
         os.system('./configure --prefix=%s --parallel=%s' % (self.TARGET_DIR, self.cpuCount))
         os.system('make -j %s && make install' % self.cpuCount)
         os.putenv('LDFLAGS', self.ENV_LDFLAGS)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'bin', 'cmake')):
+            print('\nCMAKE BUILD FAILED')
+            sys.exit(1)
 
     def b_zlib(self):
         print('\n*** Building zlib ***\n')
@@ -409,18 +498,27 @@ class ffmpeg_build():
             cfgcmd += ' --static'
         os.system(cfgcmd)
         os.system('export CFLAGS="$CFLAGS -fPIC";make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libz.a')):
+            print('\nZLIB BUILD FAILED')
+            sys.exit(1)
 
     def b_bzip2(self):
         print('\n*** Building bzip2 ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.bzip2))
         os.system('make CFLAGS="-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC"')
         os.system('make install PREFIX=%s' % self.TARGET_DIR)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libbz2.a')):
+            print('\nBZIP2 BUILD FAILED')
+            sys.exit(1)
 
     def b_ncurses(self):
         print('\n*** Building ncurses ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.ncurses))
         os.system('./configure --with-termlib --with-ticlib --prefix=%s' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libncurses.a')):
+            print('\nNCURSES BUILD FAILED')
+            sys.exit(1)
 
     def b_nasm(self):
         print('\n*** Building nasm ***\n')
@@ -428,6 +526,9 @@ class ffmpeg_build():
         cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'bin', 'nasm')):
+            print('\nNASM BUILD FAILED')
+            sys.exit(1)
 
     def b_openssl(self):
         print('\n*** Building openssl ***\n')
@@ -440,19 +541,36 @@ class ffmpeg_build():
         os.system(cfgcmd)
         os.system('make depend')
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libssl.a')):
+            print('\nOPENSSL BUILD FAILED')
+            sys.exit(1)
 
     def b_libpng(self):
         print('\n*** Building libpng ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.libpng))
         os.system('./configure --prefix={0}'.format(self.TARGET_DIR))
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libpng.a')):
+            print('\nLIBPNG BUILD FAILED')
+            sys.exit(1)
 
     def b_openjpeg(self):
         print('\n*** Building openjpeg ***\n')
+        print('OPENJPEG 2.x is still a work in progress')
+        return
         os.chdir(os.path.join(self.BUILD_DIR, self.openjpeg))
-        os.system('./bootstrap.sh')
-        os.system('./configure --disable-png --prefix=%s' % self.TARGET_DIR)
-        os.system('make -j %s && make install' % self.cpuCount)
+        # v1
+        #os.system('./bootstrap.sh')
+        #os.system('./configure --disable-png --prefix=%s' % self.TARGET_DIR)
+        #os.system('make -j %s && make install' % self.cpuCount)
+        # v2
+        os.system('mkdir build')
+        os.chdir(os.path.join(self.BUILD_DIR, self.openjpeg, 'build'))
+        os.system('cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=0 -DBUILD_CODEC=1 -DCMAKE_INSTALL_PREFIX:PATH=%s' % self.TARGET_DIR)
+        os.system('make install')
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libopenjp2.a')):
+            print('\nOPENJPEG BUILD FAILED')
+            sys.exit(1)
 
     def b_libtiff(self):
         print('\n*** Building libtiff ***\n')
@@ -463,18 +581,27 @@ class ffmpeg_build():
         else:
             os.system('export CFLAGS="-I%s";export LDFLAGS="-L%s";./configure --prefix=%s --enable-shared=yes --enable-static=no' % (os.path.join(self.TARGET_DIR, 'include'), os.path.join(self.TARGET_DIR, 'lib'), self.TARGET_DIR))
             os.system('export CFLAGS="-I%s";export LDFLAGS="-L%s";make -j %s && make install' % (os.path.join(self.TARGET_DIR, 'include'), os.path.join(self.TARGET_DIR, 'lib'), self.cpuCount))
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libtiff.a')):
+            print('\nLIBTIFF BUILD FAILED')
+            sys.exit(1)
 
     def b_libogg(self):
         print('\n*** Building libogg ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.libogg))
         os.system('./configure --prefix=%s' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libogg.a')):
+            print('\nLIBOGG BUILD FAILED')
+            sys.exit(1)
 
     def b_libvorbis(self):
         print('\n*** Building libvorbis ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.libvorbis))
         os.system('./configure --prefix=%s' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libvorbis.a')):
+            print('\nLIBVORBIS BUILD FAILED')
+            sys.exit(1)
 
     def b_libtheora(self):
         print('\n*** Building libtheora ***\n')
@@ -486,6 +613,9 @@ class ffmpeg_build():
             cfgcmd += ' --disable-static'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libtheora.a')):
+            print('\nLIBTHEORA BUILD FAILED')
+            sys.exit(1)
 
     def b_libvpx(self):
         print('\n*** Building libvpx ***\n')
@@ -497,12 +627,18 @@ class ffmpeg_build():
             cfgcmd += ' --disable-static --enable-shared'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libvpx.a')):
+            print('\nLIBVPX BUILD FAILED')
+            sys.exit(1)
 
     def b_speex(self):
         print('\n*** Building speex ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.speex))
         os.system('./configure --prefix=%s --enable-sse' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libspeex.a')):
+            print('\nSPEEX BUILD FAILED')
+            sys.exit(1)
 
     def b_lame(self):
         print('\n*** Building lame ***\n')
@@ -514,6 +650,9 @@ class ffmpeg_build():
             cfgcmd += ' --enable-shared=yes --enable-static=no'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libmp3lame.a')):
+            print('\nLAME BUILD FAILED')
+            sys.exit(1)
 
     def b_twolame(self):
         print('\n*** Building twolame ***\n')
@@ -523,6 +662,9 @@ class ffmpeg_build():
             cfgcmd += ' --disable-shared'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libtwolame.a')):
+            print('\nTWOLAME BUILD FAILED')
+            sys.exit(1)
 
     def b_soxr(self):
         print('\n*** Building soxr ***\n')
@@ -534,6 +676,9 @@ class ffmpeg_build():
         else:
             os.system('cmake -DCMAKE_BUILD_TYPE=Release -Wno-dev -DCMAKE_INSTALL_PREFIX="%s" ..' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libsoxr.a')):
+            print('\nSOXR BUILD FAILED')
+            sys.exit(1)
 
     def b_wavpack(self):
         print('\n*** Building wavpack ***\n')
@@ -543,6 +688,9 @@ class ffmpeg_build():
             cfgcmd += ' --disable-shared'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libwavpack.a')):
+            print('\nWAVPACK BUILD FAILED')
+            sys.exit(1)
 
     def b_fdkaac(self):
         print('\n*** Building fdk-aac ***\n')
@@ -562,6 +710,9 @@ class ffmpeg_build():
             cfgcmd += ' --enable-static'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libx264.a')):
+            print('\nX264 BUILD FAILED')
+            sys.exit(1)
 
     def b_x265(self):
         print('\n*** Build x265 ***\n')
@@ -571,16 +722,19 @@ class ffmpeg_build():
         else:
             os.system('cmake -G "Unix Makefiles" -Wno-dev -DCMAKE_INSTALL_PREFIX="%s" ../../source' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libx265.a')):
+            print('\nX265 BUILD FAILED')
+            sys.exit(1)
 
-    def b_kvazaar(self):
-        print('\n*** Build kvazaar ***\n')
-        os.chdir(os.path.join(self.BUILD_DIR, self.kvazaar))
-        os.system('./autogen.sh')
-        cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
-        if self.build_static is True:
-            cfgcmd += ' --disable-shared'
-        os.system(cfgcmd)
-        os.system('make -j %s && make install' % self.cpuCount)
+    #def b_kvazaar(self):
+    #    print('\n*** Build kvazaar ***\n')
+    #    os.chdir(os.path.join(self.BUILD_DIR, self.kvazaar))
+    #    os.system('./autogen.sh')
+    #    cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+    #    if self.build_static is True:
+    #        cfgcmd += ' --disable-shared'
+    #    os.system(cfgcmd)
+    #    os.system('make -j %s && make install' % self.cpuCount)
 
     def b_xvid(self):
         print('\n*** Building xvid ***\n')
@@ -592,6 +746,9 @@ class ffmpeg_build():
         os.system('./configure --prefix=%s' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
         #os.system('rm -f %s' % os.path.join(TARGET_DIR, 'lib', 'libxvidcore.so.*'))
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libxvidcore.a')):
+            print('\nXVID BUILD FAILED')
+            sys.exit(1)
 
     def b_snappy(self):
         print('\n*** Building snappy ***\n')
@@ -630,6 +787,9 @@ class ffmpeg_build():
             cfgcmd += ' --disable-shared'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libilbc.a')):
+            print('\nLIBILBC BUILD FAILED')
+            sys.exit(1)
 
     def b_webp(self):
         print('\n*** Building webp ***\n')
@@ -640,6 +800,9 @@ class ffmpeg_build():
             cfgcmd += ' --disable-shared'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libwebp.a')):
+            print('\nWEBP BUILD FAILED')
+            sys.exit(1)
 
     def b_opus(self):
         print('\n*** Building opus ***\n')
@@ -649,6 +812,9 @@ class ffmpeg_build():
             cfgcmd += ' --disable-shared'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libopus.a')):
+            print('\nOPUS BUILD FAILED')
+            sys.exit(1)
 
     def b_expat(self):
         print('\n*** Building expat ***\n')
@@ -658,6 +824,9 @@ class ffmpeg_build():
             cfgcmd += ' '
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libexpat.a')):
+            print('\nEXPAT BUILD FAILED')
+            sys.exit(1)
 
     def b_gperf(self):
         print('\n*** Building gperf ***\n')
@@ -678,6 +847,9 @@ class ffmpeg_build():
             cfgcmd += ' --enable-shared=no'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libfreetype.a')):
+            print('\nFREETYPE BUILD FAILED')
+            sys.exit(1)
 
     def b_fontconfig(self):
         print('\n*** Building fontconfig ***\n')
@@ -687,19 +859,24 @@ class ffmpeg_build():
             cfgcmd += ' --disable-shared'
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libfontconfig.a')):
+            print('\nFONTCONFIG BUILD FAILED')
+            sys.exit(1)
 
-    def b_faac(self):
-        print('\n*** Building faac ***\n')
-        os.chdir(os.path.join(self.BUILD_DIR, self.faac))
-        cfgcmd = './configure --without-mp4v2 --prefix=%s' % self.TARGET_DIR
-        if self.build_static is True:
-            cfgcmd += ' --enable-static --disable-shared'
-        os.system(cfgcmd)
-        os.system('make -j %s && make install' % self.cpuCount)
+    #def b_faac(self):
+    #    print('\n*** Building faac ***\n')
+    #    os.chdir(os.path.join(self.BUILD_DIR, self.faac))
+    #    cfgcmd = './configure --without-mp4v2 --prefix=%s' % self.TARGET_DIR
+    #    if self.build_static is True:
+    #        cfgcmd += ' --enable-static --disable-shared'
+    #    os.system(cfgcmd)
+    #    os.system('make -j %s && make install' % self.cpuCount)
 
     def b_ffmpeg(self):
         print('\n*** Building ffmpeg ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, 'ffmpeg'))
+
+        os.system('git checkout jason')
 
         # modify env
 
@@ -712,6 +889,8 @@ class ffmpeg_build():
         ENV_LDFLAGS_NEW += ' -fopenmp'  # openmp is needed by soxr
         #ENV_LDFLAGS_NEW += ' -lstdc++'  # stdc++ is needed by snappy
         os.putenv('LDFLAGS', ENV_LDFLAGS_NEW)
+
+        os.system('export')
 
         confcmd = ''
         confcmd += './configure --prefix=%s' % self.TARGET_DIR
@@ -736,8 +915,8 @@ class ffmpeg_build():
         confcmd += ' --enable-bzlib'
         confcmd += ' --enable-zlib'
         confcmd += ' --enable-lzma'
-        confcmd += ' --enable-libmp3lame'
-        confcmd += ' --enable-libopenjpeg'
+        #confcmd += ' --enable-libmp3lame'      # broken after gcc
+        #confcmd += ' --enable-libopenjpeg'     # v2 WIP
         confcmd += ' --enable-libopus'
         confcmd += ' --enable-libvorbis'
         confcmd += ' --enable-libtheora'
@@ -745,14 +924,14 @@ class ffmpeg_build():
         confcmd += ' --enable-libspeex'
         confcmd += ' --enable-libx264'
         confcmd += ' --enable-libx265'
-        confcmd += ' --enable-libsoxr'
-        confcmd += ' --enable-libtwolame'
-        confcmd += ' --enable-libwavpack'
+        #confcmd += ' --enable-libsoxr'         # broken gcc
+        #confcmd += ' --enable-libtwolame'      # broken gcc
+        #confcmd += ' --enable-libwavpack'      # broken gcc
         confcmd += ' --enable-libilbc'
         confcmd += ' --enable-libwebp'
         confcmd += ' --enable-libfreetype'
         confcmd += ' --enable-libfontconfig'
-        confcmd += ' --enable-libkvazaar'
+        #confcmd += ' --enable-libkvazaar'
         # confcmd += ' --enable-librtmp'
         # confcmd += ' --enable-libsnappy'
         # confcmd += ' --enable-libgsm'  # TODO fix headers /inc
@@ -761,6 +940,8 @@ class ffmpeg_build():
         # confcfg += ' --enable-libschrodeinger'
         # confcmd += ' --disable-devices'
         # confcmd += ' --enable-lto'
+        confcmd += ' --enable-hardcoded-tables'
+        confcmd += ' --extra-cflags="{}"'.format(ENV_CFLAGS_NEW)
         if self.nonfree:
             confcmd += ' --enable-libfdk-aac'
             confcmd += ' --enable-nvenc'
@@ -818,7 +999,7 @@ class ffmpeg_build():
         confcmd += ' --enable-libvpx'
         confcmd += ' --enable-libspeex'
         confcmd += ' --enable-libx264'
-        confcmd += ' --enable-libfaac'
+        #confcmd += ' --enable-libfaac'
         confcmd += ' --enable-libfreetype'
 
         os.system('make distclean')
@@ -866,6 +1047,19 @@ class ffmpeg_build():
         self.f_repo_clone()
         self.f_repo_deploy()
 
+    def go_gcc(self):
+        GCC_DO_BUILD = True
+        if os.path.exists(os.path.join(self.GCC_DIR, 'bin', 'gcc')):
+            GCC_DO_BUILD = False
+
+        if self.args is not None:
+            if self.args.do_gcc is True:
+                GCC_DO_BUILD = True
+
+        if GCC_DO_BUILD is True:
+            self.b_gcc_binutils()
+            self.b_gcc_gcc()
+
     def go_main(self):
         self.b_nasm()
         self.b_openssl()
@@ -893,12 +1087,12 @@ class ffmpeg_build():
         self.b_libilbc()
         self.b_webp()
         self.b_opus()
-        self.b_kvazaar()
+        #self.b_kvazaar()
         self.b_expat()
         self.b_gperf()
         self.b_freetype()
         self.b_fontconfig()
-        self.b_blackmagic()
+        #self.b_blackmagic()
         if self.nonfree:
             self.b_fdkaac()
             self.b_nvenc()
@@ -907,6 +1101,9 @@ class ffmpeg_build():
     def run(self):
         try:
             self.go_setup()
+            if self.bargs is not None:
+                if self.bargs.do_skipgcc is False:
+                    self.go_gcc()
             self.go_main()
             self.b_ffmpeg()
             self.out_pack()
@@ -917,16 +1114,19 @@ class ffmpeg_build():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--nonfree', dest='nonfree', help='build non-free/non-redist', action='store_true', default=False)
-    parser.add_argument('--cflags', dest='cflags', help='add extra CFLAGS, like -march=native')
+    parser.add_argument('--cflags', dest='cflags', help='add extra CFLAGS, like -march=native', default='')
     parser.add_argument('-s', '--shared', dest='build_static', help='build shared', action='store_false', default=True)
     parser.add_argument('--setup', dest='do_setup', help='do setup and exit', action='store_true', default=False)
     parser.add_argument('--main', dest='do_main', help='do main and exit', action='store_true', default=False)
     parser.add_argument('--ff', dest='do_ffmpeg', help='do ffmpeg and exit', action='store_true', default=False)
     parser.add_argument('--fb', dest='do_ffmbc', help='do ffmbc and exit', action='store_true', default=False)
     parser.add_argument('--out', dest='do_out', help='do out pack and exit', action='store_true', default=False)
+    parser.add_argument('--gcc', dest='do_gcc', help='do gcc and exit', action='store_true', default=False)
+    parser.add_argument('--test', dest='do_test', help='do test and exit', action='store_true', default=False)
+    parser.add_argument('--skipgcc', dest='do_skipgcc', help='skip building gcc', action='store_true', default=False)
     args = parser.parse_args()
 
-    ffmpegb = ffmpeg_build(nonfree=args.nonfree, cflags=args.cflags, build_static=args.build_static)
+    ffmpegb = ffmpeg_build(nonfree=args.nonfree, cflags=args.cflags, build_static=args.build_static, bargs=args)
 
     if args.do_setup is True:
         ffmpegb.go_setup()
@@ -939,5 +1139,13 @@ if __name__ == '__main__':
         ffmpegb.b_ffmbc()
     elif args.do_out is True:
         ffmpegb.out_pack()
+    elif args.do_gcc is True:
+        ffmpegb.go_gcc()
+    elif args.do_test is True:
+        os.system('gcc --version')
+        #ffmpegb.b_kvazaar()
+        ffmpegb.b_openjpeg()
+        #ffmpegb.b_lame()
+        #ffmpegb.b_x265()
     else:
         ffmpegb.run()
