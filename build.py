@@ -196,14 +196,12 @@ class ffmpeg_build:
 
     def setup_folder_vars(self):
         self.ENV_ROOT = os.getcwd()
-        self.TARGET_DIR = os.path.join(self.ENV_ROOT, 'target')
-        self.BUILD_DIR = os.path.join(self.ENV_ROOT, 'compile')
-        self.BUILD_GIT_DIR = os.path.join(self.ENV_ROOT, 'sourcegit')
-        self.TAR_DIR = os.path.join(self.ENV_ROOT, 'sourcetar')
-        self.GCC_DIR = os.path.join(self.ENV_ROOT, 'gccbuild')
-
-        self.OUT_FOLDER = 'output'
-        self.OUT_DIR = os.path.join(self.ENV_ROOT, self.OUT_FOLDER)
+        self.TARGET_DIR     = os.path.join(self.ENV_ROOT, 'sandbox', 'sys')
+        self.TARGET_GCC_DIR = os.path.join(self.ENV_ROOT, 'sandbox', 'sys_gcc')
+        self.BUILD_DIR      = os.path.join(self.ENV_ROOT, 'sandbox', 'build')
+        self.SRC_GIT_DIR    = os.path.join(self.ENV_ROOT, 'src')
+        self.SRC_TAR_DIR    = os.path.join(self.ENV_ROOT, 'src')
+        self.OUT_DIR        = os.path.join(self.ENV_ROOT, 'result')
 
     def setup_env_vars(self):
         # setup ENV
@@ -213,13 +211,13 @@ class ffmpeg_build:
         #    addpath += ':/opt/local/bin'
 
         # PATH
-        PATH_GCC_BIN = os.path.join(self.GCC_DIR, 'bin')
+        PATH_GCC_BIN = os.path.join(self.TARGET_GCC_DIR, 'bin')
         PATH_TARGET_BIN = os.path.join(self.TARGET_DIR, 'bin')
         os.putenv('PATH', '%s:%s:%s' % (PATH_GCC_BIN, PATH_TARGET_BIN, self.ENV_PATH_ORIG))
 
         # LD_LIBRARY_PATH
-        PATH_GCC_LIB = os.path.join(self.GCC_DIR, 'lib')
-        PATH_GCC_LIB64 = os.path.join(self.GCC_DIR, 'lib64')
+        PATH_GCC_LIB = os.path.join(self.TARGET_GCC_DIR, 'lib')
+        PATH_GCC_LIB64 = os.path.join(self.TARGET_GCC_DIR, 'lib64')
         PATH_TARGET_LIB = os.path.join(self.TARGET_DIR, 'lib')
         os.putenv('LD_LIBRARY_PATH', '%s:%s:%s:%s' % (PATH_GCC_LIB, PATH_GCC_LIB64, PATH_TARGET_LIB, self.ENV_LD_ORIG))
 
@@ -228,7 +226,7 @@ class ffmpeg_build:
 
         # CFLAG
         self.ENV_CFLAGS_STD = ''
-        self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.GCC_DIR, 'include')
+        self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.TARGET_GCC_DIR, 'include')
         self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.TARGET_DIR, 'include')
         self.ENV_CFLAGS_STD += ' %s' % self.cflags
         self.ENV_CFLAGS_STD = self.ENV_CFLAGS_STD.strip()
@@ -238,8 +236,8 @@ class ffmpeg_build:
 
         # LDFLAGS
         self.ENV_LDFLAGS_STD = ''
-        self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.GCC_DIR, 'lib')
-        self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.GCC_DIR, 'lib64')
+        self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.TARGET_GCC_DIR, 'lib')
+        self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.TARGET_GCC_DIR, 'lib64')
         self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.TARGET_DIR, 'lib')
         self.ENV_LDFLAGS_STD = self.ENV_LDFLAGS_STD.strip()
         self.ENV_LDFLAGS = self.ENV_LDFLAGS_STD
@@ -268,7 +266,7 @@ class ffmpeg_build:
         os.system('hash -r')
 
     def setupDIR(self):
-        for item in [self.ENV_ROOT, self.TARGET_DIR, self.BUILD_DIR, self.BUILD_GIT_DIR, self.TAR_DIR, self.OUT_DIR, self.GCC_DIR]:
+        for item in [self.ENV_ROOT, self.TARGET_DIR, self.BUILD_DIR, self.SRC_GIT_DIR, self.SRC_TAR_DIR, self.OUT_DIR, self.TARGET_GCC_DIR]:
             os.system('mkdir -p %s' % item)
         old_dir = os.getcwd()
         os.chdir(self.TARGET_DIR)
@@ -283,10 +281,10 @@ class ffmpeg_build:
         os.system('rm -rf %s' % self.BUILD_DIR)
 
     def cleanBUILDGIT_DIR(self):
-        os.system('rm -rf %s' % self.BUILD_GIT_DIR)
+        os.system('rm -rf %s' % self.SRC_GIT_DIR)
 
     def cleanTAR_DIR(self):
-        os.system('rm -rf %s' % self.TAR_DIR)
+        os.system('rm -rf %s' % self.SRC_TAR_DIR)
 
     def cleanOUT_DIR(self):
         os.system('rm -rf %s' % self.OUT_DIR)
@@ -296,7 +294,7 @@ class ffmpeg_build:
         os.system('rm -f %s.tar.xz' % self.OUT_DIR)
 
     def cleanGCC_DIR(self):
-        os.system('rm -rf %s' % self.GCC_DIR)
+        os.system('rm -rf %s' % self.TARGET_GCC_DIR)
 
     def cleanALL(self):
         self.cleanTARGET_DIR()
@@ -318,10 +316,10 @@ class ffmpeg_build:
     # noinspection PyBroadException
     def f_getfiles(self):
         print('\n*** Downloading files ***\n')
-        os.chdir(self.TAR_DIR)
+        os.chdir(self.SRC_TAR_DIR)
         for fileName in self.fileList:
             fileNamePre, fileNameExt = os.path.splitext(fileName)
-            if os.path.exists(os.path.join(self.TAR_DIR, fileName.rstrip('.%s' % fileNameExt))) is False:
+            if os.path.exists(os.path.join(self.SRC_TAR_DIR, fileName.rstrip('.%s' % fileNameExt))) is False:
                 try:
                     print('%s/%s' % (self.web_server, fileName))
                     response = urllib2.urlopen('%s/%s' % (self.web_server, fileName))
@@ -345,8 +343,8 @@ class ffmpeg_build:
         print('\n*** Decompressing gz files ***\n')
         os.chdir(self.BUILD_DIR)
         for fileName in self.fileListGz:
-            if os.path.exists(os.path.join(self.TAR_DIR, fileName.rstrip('.gz'))) is False:
-                os.system('gunzip -v %s' % os.path.join(self.TAR_DIR, fileName))
+            if os.path.exists(os.path.join(self.SRC_TAR_DIR, fileName.rstrip('.gz'))) is False:
+                os.system('gunzip -v %s' % os.path.join(self.SRC_TAR_DIR, fileName))
             else:
                 print('%s already uncompressed' % fileName)
         self.f_sync()
@@ -356,8 +354,8 @@ class ffmpeg_build:
         os.chdir(self.BUILD_DIR)
         for fileName in self.fileList:
             if fileName.endswith('.xz'):
-                if os.path.exists(os.path.join(self.TAR_DIR, fileName.rstrip('.xz'))) is False:
-                    os.system('%s -dv %s' % (os.path.join(self.TARGET_DIR, 'bin', 'xz'), os.path.join(self.TAR_DIR, fileName)))
+                if os.path.exists(os.path.join(self.SRC_TAR_DIR, fileName.rstrip('.xz'))) is False:
+                    os.system('%s -dv %s' % (os.path.join(self.TARGET_DIR, 'bin', 'xz'), os.path.join(self.SRC_TAR_DIR, fileName)))
                 else:
                     print('%s already uncompressed' % fileName)
         self.f_sync()
@@ -380,7 +378,7 @@ class ffmpeg_build:
             fileNamePre, fileNameExt = os.path.splitext(fileName)
             if fileNamePre.lower().endswith('.tar'):
                 print(fileNamePre)
-                tar = tarfile.open(os.path.join(self.TAR_DIR, fileNamePre))
+                tar = tarfile.open(os.path.join(self.SRC_TAR_DIR, fileNamePre))
                 tar.extractall()
                 tar.close()
 
@@ -391,18 +389,18 @@ class ffmpeg_build:
 
     def git_clone(self, name, url):
         print('\n*** Cloning %s ***\n' % name)
-        if os.path.exists(os.path.join(self.BUILD_GIT_DIR, name)):
+        if os.path.exists(os.path.join(self.SRC_GIT_DIR, name)):
             print('git pull')
-            os.chdir(os.path.join(self.BUILD_GIT_DIR, name))
+            os.chdir(os.path.join(self.SRC_GIT_DIR, name))
             os.system('git pull')
         else:
             print('git clone')
-            os.chdir(self.BUILD_GIT_DIR)
+            os.chdir(self.SRC_GIT_DIR)
             os.system('git clone %s' % url)
 
     def git_deploy(self, name):
         print('\n*** Deploy %s git to BUILD_DIR ***\n' % name)
-        os.chdir(self.BUILD_GIT_DIR)
+        os.chdir(self.SRC_GIT_DIR)
         os.system('cp -rf ./%s %s' % (name, self.BUILD_DIR))
 
     @staticmethod
@@ -414,7 +412,7 @@ class ffmpeg_build:
         print('\n*** Building gcc binutils ***\n')
         self.cflags_reset_gcc()
         os.chdir(os.path.join(self.BUILD_DIR, self.gcc_binutils))
-        os.system('./configure --prefix=%s' % self.GCC_DIR)
+        os.system('./configure --prefix=%s' % self.TARGET_GCC_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
 
     def build_gcc(self):
@@ -428,7 +426,7 @@ class ffmpeg_build:
         os.system('ln -sf %s cloog' % (os.path.join(self.BUILD_DIR, self.gcc_cloog)))
         os.system('mkdir builddir')
         os.chdir(os.path.join(self.BUILD_DIR, self.gcc_gcc, 'builddir'))
-        os.system('../configure --prefix=%s --enable-languages=c,c++,fortran --disable-multilib' % self.GCC_DIR)
+        os.system('../configure --prefix=%s --enable-languages=c,c++,fortran --disable-multilib' % self.TARGET_GCC_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
 
     def build_yasm(self):
@@ -684,7 +682,7 @@ class ffmpeg_build:
         os.chdir(os.path.join(self.BUILD_DIR, self.xvid, 'build', 'generic'))
         if self.build_static is True:
             # apply patch for static only build
-            os.system('cp -f %s ./' % os.path.join(self.TAR_DIR, 'xvid_Makefile.patch'))
+            os.system('cp -f %s ./' % os.path.join(self.SRC_TAR_DIR, 'xvid_Makefile.patch'))
             os.system('patch -f < xvid_Makefile.patch')
         os.system('./configure --prefix=%s' % self.TARGET_DIR)
         os.system('make -j %s && make install' % self.cpuCount)
@@ -844,9 +842,9 @@ class ffmpeg_build:
             for item in ['libx265.so.85', 'libvpx.so.4', 'libvorbisenc.so.2', 'libvorbis.so.0', 'libtwolame.so.0', 'libtheoraenc.so.1', 'libtheoradec.so.1', 'libspeex.so.1', 'libopenjpeg.so.1', 'libmp3lame.so.0', 'liblzma.so.5', 'libz.so.1', 'libssl.so.1.0.0', 'libcrypto.so.1.0.0', 'libwebp.so.6', 'libsoxr.so.0', 'libilbc.so.2', 'libfdk-aac.so.1', ]:
                 os.system('cp -f {0} ./'.format(os.path.join(self.TARGET_DIR, 'lib', item)))
         os.system('strip *')
+        os.system('tar -cvf ../result.tar ./')
         os.chdir(self.ENV_ROOT)
-        os.system('tar -cvf ./{0}.tar ./{0}'.format(self.OUT_FOLDER))
-        os.system('xz -ve9 ./{0}.tar'.format(self.OUT_FOLDER))
+        os.system('xz -ve9 ./result.tar')
 
     def util_striplibs(self):
         # not used, for shared
@@ -873,7 +871,7 @@ class ffmpeg_build:
 
     def go_gcc(self):
         GCC_DO_BUILD = True
-        if os.path.exists(os.path.join(self.GCC_DIR, 'bin', 'gcc')):
+        if os.path.exists(os.path.join(self.TARGET_GCC_DIR, 'bin', 'gcc')):
             GCC_DO_BUILD = False
 
         if self.args is not None:

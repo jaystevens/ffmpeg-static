@@ -11,14 +11,22 @@ if __name__ == '__main__':
             default=False)
     args = parser.parse_args()
 
-    deleteList = ['compile', 'output', 'target', 'output.tar.xz']
-    if args.all is True:
-        deleteList.append('sourcetar')
-        deleteList.append('sourcegit')
-        args.gcc = True
-    if args.gcc is True:
-        deleteList.append('gccbuild')
-    for item in deleteList:
-        os.system('rm -rf ./%s' % item)
+    deleteList = [
+        os.path.join('sandbox', 'sys'),
+        os.path.join('sandbox', 'build'),
+        os.path.join('sandbox', 'result'),
+    ]
 
+    if args.all is True:
+        deleteList.append('src')
+        args.gcc = True
+    if (args.gcc is True) or (args.all is True):
+        deleteList.append(os.path.join('sandbox', 'sys_gcc'))
+
+    for item in deleteList:
+        print('removing ./%s' % item)
+        os.system('rm -rf ./%s' % item)
+    print('rmdir sandbox')
+    os.system('rmdir sandbox')
+    print('\nDONE')
 
