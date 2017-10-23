@@ -149,11 +149,17 @@ class ffmpeg_build:
         self.gperf = 'gperf-3.1'
         self.downloadList.append(self.gperf)
 
+        self.glib = 'glib-2.54.1'
+        self.downloadList.append(self.glib)
+
         self.freetype = 'freetype-2.8.1'
         self.downloadList.append(self.freetype)
 
         self.fontconfig = 'fontconfig-2.12.4'
         self.downloadList.append(self.fontconfig)
+
+        self.fribidi = 'fribidi-0.19.7'
+        self.downloadList.append(self.fribidi)
 
         self.gcc_binutils = 'binutils-2.29.1'
         self.downloadList.append(self.gcc_binutils)
@@ -758,6 +764,20 @@ class ffmpeg_build:
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
 
+    def build_glib(self):
+        print('\n*** Building glib ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.glib))
+        cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+        cfgcmd += ' --enable-libmount=no'
+        cfgcmd += ' --with-pcre=internal'
+        if self.build_static is True:
+            cfgcmd += ' --enable-shared=no'
+        os.system(cfgcmd)
+        os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libglib-2.0.a')):
+            print('\nGLIB BUILD FAILED')
+            sys.exit(1)
+
     def build_freetype(self):
         print('\n*** Building freetype ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.freetype))
@@ -782,6 +802,18 @@ class ffmpeg_build:
         os.system('make -j %s && make install' % self.cpuCount)
         if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libfontconfig.a')):
             print('\nFONTCONFIG BUILD FAILED')
+            sys.exit(1)
+
+    def build_fribidi(self):
+        print('\n*** Building fribidi ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.fribidi))
+        cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+        if self.build_static is True:
+            cfgcmd += ' --disable-shared'
+        os.system(cfgcmd)
+        os.system('make -j %s && make install' % self.cpuCount)
+        if not os.path.exists(os.path.join(self.TARGET_DIR, 'lib', 'libfribidi.a')):
+            print('\nFRIBIDI BUILD FAILED')
             sys.exit(1)
 
     def build_ffmpeg(self):
@@ -842,7 +874,7 @@ class ffmpeg_build:
         confcmd += ' --enable-libtwolame'           # AUDIO - MP2               # broken gcc
         confcmd += ' --enable-libfreetype'          # VF    - fonts
         confcmd += ' --enable-libfontconfig'        # VF    - fonts
-        #confcmd += ' --enable-libfribidi'           # VF    - fonts/drawtext
+        confcmd += ' --enable-libfribidi'           # VF    - fonts/drawtext
         # confcmd += ' --enable-zimg'               # VF    - resize zscale
         # confcmd += ' --enable-libbluray'          # FORMAT- reading bluray
         # confcmd += ' --disable-devices'           # 
@@ -943,8 +975,10 @@ class ffmpeg_build:
         self.build_opus()
         self.build_expat()
         self.build_gperf()
+        self.build_glib()
         self.build_freetype()
         self.build_fontconfig()
+        self.build_fribidi()
         if self.nonfree:
             self.build_fdkaac()
             self.build_nvenc()
@@ -992,6 +1026,8 @@ if __name__ == '__main__':
         ffx.go_gcc()
     elif args.do_test is True:
         os.system('gcc --version')
+        ffx.build_glib()
+        ffx.build_fribidi()
         #ffx.build_soxr()
         #ffx.build_openjpeg()
         #ffmpegb.b_lame()
