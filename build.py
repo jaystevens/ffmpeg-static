@@ -820,7 +820,8 @@ class ffmpeg_build:
         print('\n*** Building ffmpeg ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, 'ffmpeg'))
 
-        os.system('git checkout jason')
+        self.cflags_reset()
+        self.flags_cmake_gcc()
 
         # modify env
         ENV_CFLAGS_FF = self.ENV_CFLAGS
@@ -980,9 +981,13 @@ class ffmpeg_build:
         self.build_fontconfig()
         self.build_fribidi()
         if self.nonfree:
-            self.build_fdkaac()
-            self.build_nvenc()
-            self.build_openssl()
+            self.go_main_nonfree()
+
+    def go_main_nonfree(self):
+        self.cflags_reset()
+        self.flags_cmake_gcc()
+        self.build_fdkaac()
+        self.build_nvenc()
 
     def run(self):
         try:
@@ -1000,14 +1005,15 @@ class ffmpeg_build:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--nonfree', dest='nonfree', help='build non-free/non-redist', action='store_true', default=False)
+    parser.add_argument('-n', '--nonfree', dest='nonfree', help='build non-free/non-redist', action='store_true', default=True)
     parser.add_argument('--cflags', dest='cflags', help='add extra CFLAGS, like -march=native', default='')
     parser.add_argument('-s', '--shared', dest='build_static', help='build shared', action='store_false', default=True)
-    parser.add_argument('--setup', dest='do_setup', help='do setup and exit', action='store_true', default=False)
-    parser.add_argument('--main', dest='do_main', help='do main and exit', action='store_true', default=False)
-    parser.add_argument('--ff', dest='do_ffmpeg', help='do ffmpeg and exit', action='store_true', default=False)
+    parser.add_argument('--setup', dest='do_setup', help='do setup ONLY and exit', action='store_true', default=False)
+    parser.add_argument('-m', '--main', dest='do_main', help='do main ONLY and exit', action='store_true', default=False)
+    parser.add_argument('-mf', '--main_nonfree', dest='do_main_nf', help='do main nonfree ONLY and exit', action='store_true', default=False)
+    parser.add_argument('-f', '--ff', dest='do_ffmpeg', help='do ffmpeg ONLY and exit', action='store_true', default=False)
     parser.add_argument('--out', dest='do_out', help='do out pack and exit', action='store_true', default=False)
-    parser.add_argument('--gcc', dest='do_gcc', help='do gcc and exit', action='store_true', default=False)
+    parser.add_argument('--gcc', dest='do_gcc', help='do gcc build ONLY and exit', action='store_true', default=False)
     parser.add_argument('--test', dest='do_test', help='do test and exit', action='store_true', default=False)
     parser.add_argument('--skipgcc', dest='do_skipgcc', help='skip building gcc', action='store_true', default=False)
     args = parser.parse_args()
@@ -1018,6 +1024,8 @@ if __name__ == '__main__':
         ffx.go_setup()
     elif args.do_main is True:
         ffx.go_main()
+    elif args.do_main_nf is True:
+        ffx.go_main_nonfree()
     elif args.do_ffmpeg is True:
         ffx.build_ffmpeg()
     elif args.do_out is True:
