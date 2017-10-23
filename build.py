@@ -46,9 +46,10 @@ class ffmpeg_build:
         self.cpuCount = multiprocessing.cpu_count()
 
         # native
-        #self.cflagsopt += ' -march=native -mtune=native'
-        self.cflags += ' -march=corei7 -mtune=corei7'
-        #self.cflagsopt += ' -march=corei7 -mtune=corei7-avx'
+        #self.cflags += ' -march=native -mtune=native'
+        #self.cflags += ' -march=corei7 -mtune=corei7'
+        #self.cflags += ' -march=corei7 -mtune=corei7-avx'
+        self.cflags += ' -march=nehalem -mtune=broadwell'
         self.cflags += ' -O3'
 
         # GCC CFLAGS
@@ -182,9 +183,6 @@ class ffmpeg_build:
         #self.ffmpeg = 'https://bitbucket.org/jaystevens/ffmpeg.git'
         self.gitList.append(['ffmpeg', self.ffmpeg])
 
-        self.ffmbc = 'https://github.com/bcoudurier/FFmbc.git'
-        self.gitList.append(['FFmbc', self.ffmbc])
-
         for item in self.downloadList:
             self.fileList.append('%s.tar.xz' % item)
         for item in self.downloadAuxList:
@@ -233,6 +231,7 @@ class ffmpeg_build:
         self.ENV_CFLAGS = self.ENV_CFLAGS_STD
         os.putenv('CFLAGS', self.ENV_CFLAGS)
         os.putenv('CPPFLAGS', self.ENV_CFLAGS)
+        os.putenv('CXXFLAGS', self.ENV_CFLAGS)
 
         # LDFLAGS
         self.ENV_LDFLAGS_STD = ''
@@ -250,22 +249,40 @@ class ffmpeg_build:
         os.system('export')
 
     def cflags_reset(self):
+        print('\nResetting CFLAGS\n')
+        print('CFLAGS: {}'.format(self.ENV_CFLAGS))
         os.putenv('CFLAGS', self.ENV_CFLAGS)
         os.putenv('CPPFLAGS', self.ENV_CFLAGS)
-        #os.putenv('CXXFLAGS', self.ENV_CFLAGS)
+        os.putenv('CXXFLAGS', self.ENV_CFLAGS)
         os.system('hash -r')
 
     def cflags_reset_gcc(self):
+        print('\nResetting CFLAGS for gcc build\n')
+        print('CFLAGS: {}'.format(self.ENV_CFLAGS))
         os.putenv('CFLAGS', self.ENV_CFLAGS_GCC)
         os.putenv('CPPFLAGS', self.ENV_CFLAGS_GCC)
-        #os.putenv('CXXFLAGS', self.ENV_CFLAGS_GCC)
+        os.putenv('CXXFLAGS', self.ENV_CFLAGS_GCC)
+        os.system('hash -r')
+
+    def flags_cmake_gcc(self):
+        gcc_path = os.path.join(self.TARGET_GCC_DIR, 'bin', 'gcc')
+        gxx_path = os.path.join(self.TARGET_GCC_DIR, 'bin', 'g++')
+        if os.path.exists(gcc_path):
+            print('\nCC: {}\n'.format(gcc_path))
+            os.putenv('CC', gcc_path)
+            os.putenv('CMAKE_C_COMPILER', gcc_path)
+        if os.path.exists(gxx_path):
+            print('\nCXX: {}\n'.format(gxx_path))
+            os.putenv('CMAKE_CXX_COMPILER', gxx_path)
+            os.putenv('CXX', gxx_path)
         os.system('hash -r')
 
     @staticmethod
     def cflags_clear():
+        print('\nClearing CFLAGS\n')
         os.putenv('CFLAGS', '')
         os.putenv('CPPFLAGS', '')
-        #os.putenv('CXXFLAGS', '')
+        os.putenv('CXXFLAGS', '')
         os.system('hash -r')
 
     def setupDIR(self):
@@ -779,10 +796,13 @@ class ffmpeg_build:
             ENV_CFLAGS_FF += ' --static'
         os.putenv('CFLAGS', ENV_CFLAGS_FF)
         os.putenv('CPPFLAGS', ENV_CFLAGS_FF)
+        os.putenv('CXXFLAGS', ENV_CFLAGS_FF)
         ENV_LDFLAGS_FF = self.ENV_LDFLAGS
         ENV_LDFLAGS_FF += ' -fopenmp -lm'  # openmp is needed by soxr
         #ENV_LDFLAGS_NEW += ' -lstdc++'  # stdc++ is needed by snappy
         os.putenv('LDFLAGS', ENV_LDFLAGS_FF)
+
+        os.putenv('LDLIBFLAGS', '-fopenmp -lm')
         os.system('hash -r')
 
         os.system('export')
@@ -802,38 +822,42 @@ class ffmpeg_build:
         else:
             confcmd += ' --disable-static'
             confcmd += ' --enable-static'
-        confcmd += ' --disable-debug'
-        confcmd += ' --enable-runtime-cpudetect'
-        confcmd += ' --disable-doc'
-        confcmd += ' --disable-ffplay'
-        confcmd += ' --disable-ffserver'
-        confcmd += ' --enable-bzlib'
-        confcmd += ' --enable-zlib'
-        confcmd += ' --enable-lzma'
-        #confcmd += ' --enable-libmp3lame'      # broken after gcc
-        #confcmd += ' --enable-libopenjpeg'     # v2 WIP
-        confcmd += ' --enable-libopus'
-        confcmd += ' --enable-libvorbis'
-        confcmd += ' --enable-libtheora'
-        confcmd += ' --enable-libvpx'
-        confcmd += ' --enable-libx264'
-        confcmd += ' --enable-libx265'
-        confcmd += ' --enable-libsoxr'         # broken gcc
-        #confcmd += ' --enable-libtwolame'      # broken gcc
-        confcmd += ' --enable-libfreetype'
-        confcmd += ' --enable-libfontconfig'
-        # confcmd += ' --enable-librtmp'
-        # confcmd += ' --enable-libsnappy'
-        # confcmd += ' --enable-zimg'
-        # confcmd += ' --enable-libbluray'
-        # confcmd += ' --disable-devices'
-        # confcmd += ' --enable-lto'
-        confcmd += ' --enable-hardcoded-tables'
+        confcmd += ' --disable-debug'               # disable debugging
+        confcmd += ' --enable-runtime-cpudetect'    # should be on all the time
+        confcmd += ' --disable-doc'                 # disable building doc
+        confcmd += ' --disable-ffplay'              # do not compile ffplay
+        confcmd += ' --disable-ffserver'            # do not compile ffserver
+        confcmd += ' --enable-bzlib'                # bz2
+        confcmd += ' --enable-zlib'                 # zlib
+        confcmd += ' --enable-lzma'                 # lzma (xz)
+        confcmd += ' --enable-libmp3lame'           # AUDIO - mp3               # broken gcc
+        #confcmd += ' --enable-libopenjpeg'         # VIDEO - jpeg2000          # v2 WIP
+        confcmd += ' --enable-libopus'              # AUDIO - opus
+        confcmd += ' --enable-libvorbis'            #       - vorbis
+        confcmd += ' --enable-libtheora'            #       - theora
+        confcmd += ' --enable-libvpx'               # VIDEO - VP8/VP9
+        confcmd += ' --enable-libx264'              # VIDEO - H264
+        confcmd += ' --enable-libx265'              # VIDEO - H265/HEVC
+        confcmd += ' --enable-libsoxr'              # AUDIO - RESMAPLE          # broken gcc
+        confcmd += ' --enable-libtwolame'           # AUDIO - MP2               # broken gcc
+        confcmd += ' --enable-libfreetype'          # VF    - fonts
+        confcmd += ' --enable-libfontconfig'        # VF    - fonts
+        #confcmd += ' --enable-libfribidi'           # VF    - fonts/drawtext
+        # confcmd += ' --enable-zimg'               # VF    - resize zscale
+        # confcmd += ' --enable-libbluray'          # FORMAT- reading bluray
+        # confcmd += ' --disable-devices'           # 
+        confcmd += ' --enable-hardcoded-tables'     # Hardcoded tables - speeds up start a little
+        confcmd += ' --enable-avresample'           # FILTER- RESAMPLE
+        #confcmd += ' --enable-cuda-sdk'             # CUDA features
+        #confcmd += ' --enable-libnpp'               # Nvidia NPP
+
         #confcmd += ' --extra-cflags="{}"'.format(ENV_CFLAGS_NEW)
+        confcmd += ' --extra-ldlibflags="-lm"'      # this fixes 3rd party libs
+        confcmd += ' --extra-libs="-lm"'            # this fixes 3rd party libs
         if self.nonfree:
-            confcmd += ' --enable-libfdk-aac'
-            confcmd += ' --enable-nvenc'
-            confcmd += ' --enable-openssl'
+            confcmd += ' --enable-libfdk-aac'       # AUDIO - AAC FDK Library
+            confcmd += ' --enable-nvenc'            # VIDEO - ? is this still needed
+            confcmd += ' --enable-openssl'          # FORMAT- openssl/util
 
         os.system('make distclean')
         os.system(confcmd)
@@ -896,6 +920,7 @@ class ffmpeg_build:
 
     def go_main(self):
         self.cflags_reset()
+        self.flags_cmake_gcc()
         self.build_nasm()
         self.build_openssl()
         self.build_cmake()
@@ -967,7 +992,7 @@ if __name__ == '__main__':
         ffx.go_gcc()
     elif args.do_test is True:
         os.system('gcc --version')
-        ffx.build_soxr()
+        #ffx.build_soxr()
         #ffx.build_openjpeg()
         #ffmpegb.b_lame()
         #ffmpegb.b_x265()
