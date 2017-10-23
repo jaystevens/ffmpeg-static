@@ -881,15 +881,12 @@ class ffmpeg_build:
         # confcmd += ' --disable-devices'           # 
         confcmd += ' --enable-hardcoded-tables'     # Hardcoded tables - speeds up start a little
         confcmd += ' --enable-avresample'           # FILTER- RESAMPLE
-        #confcmd += ' --enable-cuda-sdk'             # CUDA features
-        #confcmd += ' --enable-libnpp'               # Nvidia NPP
 
         #confcmd += ' --extra-cflags="{}"'.format(ENV_CFLAGS_NEW)
         confcmd += ' --extra-ldlibflags="-lm"'      # this fixes 3rd party libs
         confcmd += ' --extra-libs="-lm"'            # this fixes 3rd party libs
         if self.nonfree:
             confcmd += ' --enable-libfdk-aac'       # AUDIO - AAC FDK Library
-            confcmd += ' --enable-nvenc'            # VIDEO - ? is this still needed
             confcmd += ' --enable-openssl'          # FORMAT- openssl/util
 
         os.system('make distclean')
@@ -1034,11 +1031,6 @@ if __name__ == '__main__':
         ffx.go_gcc()
     elif args.do_test is True:
         os.system('gcc --version')
-        ffx.build_glib()
-        ffx.build_fribidi()
-        #ffx.build_soxr()
-        #ffx.build_openjpeg()
-        #ffmpegb.b_lame()
-        #ffmpegb.b_x265()
+        #ffx.build_glib()
     else:
         ffx.run()
