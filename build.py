@@ -55,6 +55,8 @@ class ffmpeg_build:
         # GCC CFLAGS
         self.ENV_CFLAGS_GCC = '-march=corei7 -mtune=corei7 -O3'
 
+        self.CUDA_SDK = '/usr/local/cuda-9.0'
+
         self.app_list()
         self.setup_folder_vars()
         self.setup_env_vars()
@@ -215,15 +217,36 @@ class ffmpeg_build:
         #    addpath += ':/opt/local/bin'
 
         # PATH
+        PATH_FULL = self.ENV_PATH_ORIG
+        # add gcc/bin to PATH
         PATH_GCC_BIN = os.path.join(self.TARGET_GCC_DIR, 'bin')
+        PATH_FULL = '%s:%s' % (PATH_GCC_BIN, PATH_FULL)
+        # add sys/bin to PATH
         PATH_TARGET_BIN = os.path.join(self.TARGET_DIR, 'bin')
-        os.putenv('PATH', '%s:%s:%s' % (PATH_GCC_BIN, PATH_TARGET_BIN, self.ENV_PATH_ORIG))
+        PATH_FULL = '%s:%s' % (PATH_TARGET_BIN, PATH_FULL)
+        # add cuda/bin to PATH
+        if self.args.cuda is True:
+            if os.path.exists(self.CUDA_SDK):
+                PATH_FULL = '%s:%s' % (os.path.join(self.CUDA_SDK, 'bin'), PATH_FULL)
+        # export PATH
+        os.putenv('PATH', PATH_FULL)
 
         # LD_LIBRARY_PATH
+        LD_LIB_FULL = self.ENV_LD_ORIG
+        # add gcc/lib to LD_LIB
         PATH_GCC_LIB = os.path.join(self.TARGET_GCC_DIR, 'lib')
+        LD_LIB_FULL = '%s:%s' % (PATH_GCC_LIB, LD_LIB_FULL)
+        # add gcc/lib64 to LD_LIB
         PATH_GCC_LIB64 = os.path.join(self.TARGET_GCC_DIR, 'lib64')
+        LD_LIB_FULL = '%s:%s' % (PATH_GCC_LIB64, LD_LIB_FULL)
+        # add sys/lib to LD_LIB
         PATH_TARGET_LIB = os.path.join(self.TARGET_DIR, 'lib')
-        os.putenv('LD_LIBRARY_PATH', '%s:%s:%s:%s' % (PATH_GCC_LIB, PATH_GCC_LIB64, PATH_TARGET_LIB, self.ENV_LD_ORIG))
+        LD_LIB_FULL = '%s:%s' % (PATH_TARGET_LIB, LD_LIB_FULL)
+        # add cuda/lib to LD_LIB
+        if self.args.cuda is True:
+            if os.path.exists(self.CUDA_SDK):
+                LD_LIB_FULL = '%s:%s' % (os.path.join(self.CUDA_SDK, 'lib64'), LD_LIB_FULL)
+        os.putenv('LD_LIBRARY_PATH', LD_LIB_FULL)
 
         # PKG CONFIG
         os.putenv('PKG_CONFIG_PATH', os.path.join(self.TARGET_DIR, 'lib', 'pkgconfig'))
@@ -232,6 +255,9 @@ class ffmpeg_build:
         self.ENV_CFLAGS_STD = ''
         self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.TARGET_GCC_DIR, 'include')
         self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.TARGET_DIR, 'include')
+        if self.args.cuda is True:
+            if os.path.exists(self.CUDA_SDK):
+                self.ENV_CFLAGS_STD += ' -I%s' % os.path.join(self.CUDA_SDK, 'include')
         self.ENV_CFLAGS_STD += ' %s' % self.cflags
         self.ENV_CFLAGS_STD = self.ENV_CFLAGS_STD.strip()
         self.ENV_CFLAGS = self.ENV_CFLAGS_STD
@@ -244,6 +270,9 @@ class ffmpeg_build:
         self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.TARGET_GCC_DIR, 'lib')
         self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.TARGET_GCC_DIR, 'lib64')
         self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.TARGET_DIR, 'lib')
+        if self.args.cuda is True:
+            if os.path.exists(self.CUDA_SDK):
+                self.ENV_LDFLAGS_STD += ' -L%s' % os.path.join(self.CUDA_SDK, 'lib64')
         self.ENV_LDFLAGS_STD = self.ENV_LDFLAGS_STD.strip()
         self.ENV_LDFLAGS = self.ENV_LDFLAGS_STD
         if self.build_static is True:
@@ -816,6 +845,18 @@ class ffmpeg_build:
             print('\nFRIBIDI BUILD FAILED')
             sys.exit(1)
 
+    def build_cuda(self):
+        print('\n*** Setup cuda ***\n')
+
+        # libcuda.so fix
+        CUDA_SO  = '/usr/lib64/nvidia/libcuda.so'
+        CUDA_SO1 = '/usr/lib64/nvidia/libcuda.so.1'
+        if os.path.exists(CUDA_SO):
+            os.system('ln -s {} {}'.format(CUDA_SO, os.path.join(self.TARGET_DIR, 'lib')))
+        if os.path.exists(CUDA_SO1):
+            os.system('ln -s {} {}'.format(CUDA_SO1, os.path.join(self.TARGET_DIR, 'lib64')))
+
+
     def build_ffmpeg(self):
         print('\n*** Building ffmpeg ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, 'ffmpeg'))
@@ -825,14 +866,17 @@ class ffmpeg_build:
 
         # modify env
         ENV_CFLAGS_FF = self.ENV_CFLAGS
-        if self.build_static is True:
-            ENV_CFLAGS_FF += ' --static'
+        #if self.build_static is True:
+        #    ENV_CFLAGS_FF += ' --static'
         os.putenv('CFLAGS', ENV_CFLAGS_FF)
         os.putenv('CPPFLAGS', ENV_CFLAGS_FF)
         os.putenv('CXXFLAGS', ENV_CFLAGS_FF)
         ENV_LDFLAGS_FF = self.ENV_LDFLAGS
-        ENV_LDFLAGS_FF += ' -fopenmp -lm'  # openmp is needed by soxr
-        #ENV_LDFLAGS_NEW += ' -lstdc++'  # stdc++ is needed by snappy
+        ENV_LDFLAGS_FF += ' -fopenmp -lm'  # openmp is needed by soxr [this should be removeable 2017-10-25]
+        # CUDA can not be LD static, it needs runtime linking :(
+        if self.args.cuda is True:
+            ENV_LDFLAGS_FF = ENV_LDFLAGS_FF.replace(' -static ', ' ')
+
         os.putenv('LDFLAGS', ENV_LDFLAGS_FF)
 
         os.putenv('LDLIBFLAGS', '-fopenmp -lm')
@@ -855,7 +899,7 @@ class ffmpeg_build:
         else:
             confcmd += ' --disable-static'
             confcmd += ' --enable-static'
-        confcmd += ' --disable-debug'               # disable debugging
+        #confcmd += ' --disable-debug'               # disable debugging
         confcmd += ' --enable-runtime-cpudetect'    # should be on all the time
         confcmd += ' --disable-doc'                 # disable building doc
         confcmd += ' --disable-ffplay'              # do not compile ffplay
@@ -863,24 +907,28 @@ class ffmpeg_build:
         confcmd += ' --enable-bzlib'                # bz2
         confcmd += ' --enable-zlib'                 # zlib
         confcmd += ' --enable-lzma'                 # lzma (xz)
-        confcmd += ' --enable-libmp3lame'           # AUDIO - mp3               # broken gcc
+        #confcmd += ' --enable-libmp3lame'          # AUDIO - mp3
         #confcmd += ' --enable-libopenjpeg'         # VIDEO - jpeg2000          # v2 WIP
         confcmd += ' --enable-libopus'              # AUDIO - opus
-        confcmd += ' --enable-libvorbis'            #       - vorbis
-        confcmd += ' --enable-libtheora'            #       - theora
+        #confcmd += ' --enable-libvorbis'           #       - vorbis
+        #confcmd += ' --enable-libtheora'           #       - theora
         confcmd += ' --enable-libvpx'               # VIDEO - VP8/VP9
         confcmd += ' --enable-libx264'              # VIDEO - H264
         confcmd += ' --enable-libx265'              # VIDEO - H265/HEVC
-        confcmd += ' --enable-libsoxr'              # AUDIO - RESMAPLE          # broken gcc
-        confcmd += ' --enable-libtwolame'           # AUDIO - MP2               # broken gcc
-        confcmd += ' --enable-libfreetype'          # VF    - fonts
-        confcmd += ' --enable-libfontconfig'        # VF    - fonts
+        confcmd += ' --enable-libsoxr'              # AUDIO - RESMAPLE
+        confcmd += ' --enable-libtwolame'           # AUDIO - MP2
+        confcmd += ' --enable-libfreetype'          # VF    - fonts/drawtext
+        confcmd += ' --enable-libfontconfig'        # VF    - fonts/drawtext
         confcmd += ' --enable-libfribidi'           # VF    - fonts/drawtext
         # confcmd += ' --enable-zimg'               # VF    - resize zscale
         # confcmd += ' --enable-libbluray'          # FORMAT- reading bluray
         # confcmd += ' --disable-devices'           # 
         confcmd += ' --enable-hardcoded-tables'     # Hardcoded tables - speeds up start a little
         confcmd += ' --enable-avresample'           # FILTER- RESAMPLE
+        confcmd += ' --disable-cuvid'               # nVidia Cuvid Decoder - Broken/bad - nonfree
+        #confcmd += ' --enable-nvenc'               # nVidia NVENC h264/h265 encoder
+        confcmd += ' --disable-nvenc'               # nVidia NVENC - seg faults on linux
+        #confcmd += ' --enable-opencl'              # OpenCL is used for some filters [no-encode/decode support]
 
         #confcmd += ' --extra-cflags="{}"'.format(ENV_CFLAGS_NEW)
         confcmd += ' --extra-ldlibflags="-lm"'      # this fixes 3rd party libs
@@ -888,6 +936,15 @@ class ffmpeg_build:
         if self.nonfree:
             confcmd += ' --enable-libfdk-aac'       # AUDIO - AAC FDK Library
             confcmd += ' --enable-openssl'          # FORMAT- openssl/util
+            if self.args.cuda is True:
+                if os.path.exists(self.CUDA_SDK):
+                    print('FOUND CUDA SDK: {}'.format(self.CUDA_SDK))
+                    #confcmd += ' --extra-ldlibflags="-lcudart"'   # require cudart [runtime]
+                    confcmd += ' --enable-cuda-sdk'             # nVidia CUDA processing
+                    confcmd += ' --enable-libnpp'           # nVidia CUDA NPP
+                    confcmd += ' --nvccflags="-gencode arch=compute_61,code=sm_61 -O2"'
+
+
 
         os.system('make distclean')
         os.system(confcmd)
@@ -977,6 +1034,7 @@ class ffmpeg_build:
         self.build_freetype()
         self.build_fontconfig()
         self.build_fribidi()
+        self.build_cuda()
         if self.nonfree:
             self.go_main_nonfree()
 
@@ -1004,6 +1062,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--nonfree', dest='nonfree', help='build non-free/non-redist', action='store_true', default=True)
     parser.add_argument('--cflags', dest='cflags', help='add extra CFLAGS, like -march=native', default='')
+    parser.add_argument('--cuda', dest='cuda', help='build with cuda dynamic linking', action='store_true', default=False)
     parser.add_argument('-s', '--shared', dest='build_static', help='build shared', action='store_false', default=True)
     parser.add_argument('--setup', dest='do_setup', help='do setup ONLY and exit', action='store_true', default=False)
     parser.add_argument('-m', '--main', dest='do_main', help='do main ONLY and exit', action='store_true', default=False)
@@ -1031,6 +1090,7 @@ if __name__ == '__main__':
         ffx.go_gcc()
     elif args.do_test is True:
         os.system('gcc --version')
+        ffx.build_cuda()
         #ffx.build_glib()
     else:
         ffx.run()
