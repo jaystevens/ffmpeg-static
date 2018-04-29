@@ -75,13 +75,16 @@ class ffmpeg_build:
         self.yasm = 'yasm-1.3.0'
         self.downloadListGz.append(self.yasm)
 
-        self.nasm = 'nasm-2.13.01'
+        self.nasm = 'nasm-2.13.03'
         self.downloadList.append(self.nasm)
 
-        self.openssl = 'openssl-1.0.2l'
+        self.openssl = 'openssl-1.0.2o'
         self.downloadList.append(self.openssl)
 
-        self.cmake = 'cmake-3.9.4'
+        self.curl = 'curl-7.59.0'
+        self.downloadList.append(self.curl)
+
+        self.cmake = 'cmake-3.11.0'
         self.downloadList.append(self.cmake)
 
         self.zlib = 'zlib-1.2.11'
@@ -90,32 +93,32 @@ class ffmpeg_build:
         self.bzip2 = 'bzip2-1.0.6'
         self.downloadList.append(self.bzip2)
 
-        self.ncurses = 'ncurses-6.0'
+        self.ncurses = 'ncurses-6.1'
         self.downloadList.append(self.ncurses)
 
-        self.libpng = 'libpng-1.6.32'
+        self.libpng = 'libpng-1.6.34'
         self.downloadList.append(self.libpng)
 
         #self.openjpeg = 'openjpeg-1.5.2'  # ffmpeg works with 1.x, not 2.x
         self.openjpeg = 'openjpeg-2.3.0'
         self.downloadList.append(self.openjpeg)
 
-        self.libtiff = 'tiff-4.0.6'
+        self.libtiff = 'tiff-4.0.9'
         self.downloadList.append(self.libtiff)
 
-        self.libogg = 'libogg-1.3.2'
+        self.libogg = 'libogg-1.3.3'
         self.downloadList.append(self.libogg)
 
-        self.libvorbis = 'libvorbis-1.3.5'
+        self.libvorbis = 'libvorbis-1.3.6'
         self.downloadList.append(self.libvorbis)
 
         self.libtheora = 'libtheora-1.1.1'
         self.downloadList.append(self.libtheora)
 
-        self.libvpx = 'libvpx-1.6.1'
+        self.libvpx = 'libvpx-1.7.0'
         self.downloadList.append(self.libvpx)
 
-        self.lame = 'lame-3.99.5'
+        self.lame = 'lame-3.100'
         self.downloadList.append(self.lame)
 
         self.twolame = 'twolame-0.3.13'
@@ -135,23 +138,23 @@ class ffmpeg_build:
         self.x265 = 'https://github.com/videolan/x265.git'
         self.gitList.append(['x265', self.x265])
 
-        self.xvid = 'xvid-1.3.4'
+        self.xvid = 'xvid-1.3.5'
         self.downloadList.append(self.xvid)
         self.downloadAuxList.append('xvid_Makefile.patch')
 
-        self.nvenc = 'nvidia_video_sdk_8.0.14'
-        self.downloadList.append(self.nvenc)
+        #self.nvenc = 'nvidia_video_sdk_8.0.14'
+        #self.downloadList.append(self.nvenc)
 
         self.opus = 'opus-1.2.1'
         self.downloadList.append(self.opus)
 
-        self.expat = 'expat-2.2.4'
+        self.expat = 'expat-2.2.5'
         self.downloadList.append(self.expat)
 
         self.gperf = 'gperf-3.1'
         self.downloadList.append(self.gperf)
 
-        self.glib = 'glib-2.54.1'
+        self.glib = 'glib-2.55.0'
         self.downloadList.append(self.glib)
 
         self.freetype = 'freetype-2.8.1'
@@ -163,28 +166,28 @@ class ffmpeg_build:
         self.fribidi = 'fribidi-0.19.7'
         self.downloadList.append(self.fribidi)
 
-        self.gcc_binutils = 'binutils-2.29.1'
+        self.gcc_binutils = 'binutils-2.30'
         self.downloadList.append(self.gcc_binutils)
 
-        self.gcc_glibc = 'glibc-2.26'
+        self.gcc_glibc = 'glibc-2.27'
         self.downloadList.append(self.gcc_glibc)
 
-        self.gcc_mpfr = 'mpfr-3.1.6'
+        self.gcc_mpfr = 'mpfr-4.0.1'
         self.downloadList.append(self.gcc_mpfr)
 
         self.gcc_gmp = 'gmp-6.1.2'
         self.downloadList.append(self.gcc_gmp)
 
-        self.gcc_mpc = 'mpc-1.0.3'
+        self.gcc_mpc = 'mpc-1.1.0'
         self.downloadList.append(self.gcc_mpc)
 
-        self.gcc_isl = 'isl-0.18'
+        self.gcc_isl = 'isl-0.19'
         self.downloadList.append(self.gcc_isl)
 
         self.gcc_cloog = 'cloog-0.18.4'
         self.downloadList.append(self.gcc_cloog)
 
-        self.gcc_gcc = 'gcc-7.2.0'
+        self.gcc_gcc = 'gcc-7.3.0'
         self.downloadList.append(self.gcc_gcc)
 
         self.ffmpeg = 'git://source.ffmpeg.org/ffmpeg.git'
@@ -530,6 +533,14 @@ class ffmpeg_build:
         self.check_lib('liblzma', 'XZ/LZMA')
         self.check_bin('xz')
 
+    def build_curl(self):
+        print('\n*** Building curl ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.curl))
+        os.system('./configure --prefix=%s --enable-shared=no --enable-static=yes' % (self.TARGET_DIR))
+        os.system('make -j %s && make install' % self.cpuCount)
+        self.check_bin('curl')
+        self.check_lib('libcurl', 'CURL')
+
     def build_cmake(self):
         print('\n*** Building cmake ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.cmake))
@@ -743,11 +754,11 @@ class ffmpeg_build:
         #os.system('rm -f %s' % os.path.join(TARGET_DIR, 'lib', 'libxvidcore.so.*'))
         self.check_lib('libxvidcore', 'XVID')
 
-    def build_nvenc(self):
-        # TODO - 2017-10-27 is this still needed to build ffmpeg?
-        print('\n*** Deploying nvenc (Nvidia Video SDK) ***\n')
-        os.chdir(os.path.join(self.BUILD_DIR, self.nvenc, 'Samples', 'common', 'inc'))
-        os.system('cp -f ./nvEncodeAPI.h %s' % os.path.join(self.TARGET_DIR, 'include'))
+    #def build_nvenc(self):
+    #    # TODO - 2017-10-27 is this still needed to build ffmpeg?
+    #    print('\n*** Deploying nvenc (Nvidia Video SDK) ***\n')
+    #    os.chdir(os.path.join(self.BUILD_DIR, self.nvenc, 'Samples', 'common', 'inc'))
+    #    os.system('cp -f ./nvEncodeAPI.h %s' % os.path.join(self.TARGET_DIR, 'include'))
 
     def build_opus(self):
         print('\n*** Building opus ***\n')
@@ -994,12 +1005,13 @@ class ffmpeg_build:
     def go_main(self):
         self.cflags_reset()
         self.flags_cmake_gcc()
+        self.build_zlib()
         self.build_yasm(build_new_gcc=True)
         self.build_xz(build_new_gcc=True)
         self.build_nasm()
         self.build_openssl()
+        self.build_curl()
         self.build_cmake()
-        self.build_zlib()
         self.build_bzip2()
         self.build_ncurses()
         self.build_libtiff()
@@ -1030,7 +1042,7 @@ class ffmpeg_build:
         self.cflags_reset()
         self.flags_cmake_gcc()
         self.build_fdkaac()
-        self.build_nvenc()
+        #self.build_nvenc()
 
     def run(self):
         try:
