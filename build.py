@@ -69,7 +69,7 @@ class ffmpeg_build:
         self.downloadListGz = []
         self.fileListGz = []
 
-        self.xz = 'xz-5.2.3'
+        self.xz = 'xz-5.2.4'
         self.downloadListGz.append(self.xz)
 
         self.yasm = 'yasm-1.3.0'
@@ -78,13 +78,13 @@ class ffmpeg_build:
         self.nasm = 'nasm-2.13.03'
         self.downloadList.append(self.nasm)
 
-        self.openssl = 'openssl-1.0.2o'
+        self.openssl = 'openssl-1.0.2p'
         self.downloadList.append(self.openssl)
 
-        self.curl = 'curl-7.59.0'
+        self.curl = 'curl-7.61.0'
         self.downloadList.append(self.curl)
 
-        self.cmake = 'cmake-3.11.0'
+        self.cmake = 'cmake-3.12.1'
         self.downloadList.append(self.cmake)
 
         self.zlib = 'zlib-1.2.11'
@@ -96,7 +96,7 @@ class ffmpeg_build:
         self.ncurses = 'ncurses-6.1'
         self.downloadList.append(self.ncurses)
 
-        self.libpng = 'libpng-1.6.34'
+        self.libpng = 'libpng-1.6.35'
         self.downloadList.append(self.libpng)
 
         #self.openjpeg = 'openjpeg-1.5.2'  # ffmpeg works with 1.x, not 2.x
@@ -127,7 +127,7 @@ class ffmpeg_build:
         self.soxr = 'soxr-0.1.2'
         self.downloadList.append(self.soxr)
 
-        self.fdkaac = 'fdk-aac-0.1.5'
+        self.fdkaac = 'fdk-aac-0.1.6'
         self.downloadList.append(self.fdkaac)
 
         self.x264 = 'https://git.videolan.org/git/x264.git'
@@ -148,28 +148,28 @@ class ffmpeg_build:
         self.opus = 'opus-1.2.1'
         self.downloadList.append(self.opus)
 
-        self.expat = 'expat-2.2.5'
+        self.expat = 'expat-2.2.6'
         self.downloadList.append(self.expat)
 
         self.gperf = 'gperf-3.1'
         self.downloadList.append(self.gperf)
 
-        self.glib = 'glib-2.55.0'
+        self.glib = 'glib-2.58.0'
         self.downloadList.append(self.glib)
 
-        self.freetype = 'freetype-2.8.1'
+        self.freetype = 'freetype-2.9.1'
         self.downloadList.append(self.freetype)
 
-        self.fontconfig = 'fontconfig-2.12.4'
+        self.fontconfig = 'fontconfig-2.13.1'
         self.downloadList.append(self.fontconfig)
 
-        self.fribidi = 'fribidi-0.19.7'
+        self.fribidi = 'fribidi-1.0.5'
         self.downloadList.append(self.fribidi)
 
-        self.gcc_binutils = 'binutils-2.30'
+        self.gcc_binutils = 'binutils-2.31.1'
         self.downloadList.append(self.gcc_binutils)
 
-        self.gcc_glibc = 'glibc-2.27'
+        self.gcc_glibc = 'glibc-2.28'
         self.downloadList.append(self.gcc_glibc)
 
         self.gcc_mpfr = 'mpfr-4.0.1'
@@ -181,7 +181,7 @@ class ffmpeg_build:
         self.gcc_mpc = 'mpc-1.1.0'
         self.downloadList.append(self.gcc_mpc)
 
-        self.gcc_isl = 'isl-0.19'
+        self.gcc_isl = 'isl-0.19'  # isl 0.20 has broken headers
         self.downloadList.append(self.gcc_isl)
 
         self.gcc_cloog = 'cloog-0.18.4'
