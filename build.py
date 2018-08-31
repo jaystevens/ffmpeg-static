@@ -145,6 +145,9 @@ class ffmpeg_build:
         #self.nvenc = 'nvidia_video_sdk_8.0.14'
         #self.downloadList.append(self.nvenc)
 
+        self.aom = 'https://aomedia.googlesource.com/aom'
+        self.gitList.append(['aom', self.aom])
+
         self.opus = 'opus-1.2.1'
         self.downloadList.append(self.opus)
 
@@ -742,6 +745,31 @@ class ffmpeg_build:
         os.system('make -j %s && make install' % self.cpuCount)
         self.check_lib('libx265', 'X265')
 
+    def build_aom(self):
+        print('\n*** Build aom ***\n')
+        aom_src_folder = os.path.join(self.BUILD_DIR, 'aom')
+        os.chdir(aom_src_folder)
+
+        cmake_bin = os.path.join(self.TARGET_DIR, 'bin', 'cmake')
+
+        build_folder = os.path.join(self.BUILD_DIR, 'aom', 'aom_build')
+        if not os.path.exists(build_folder):
+            os.makedirs(build_folder)
+        os.chdir(build_folder)
+
+        cmake_build_opts = "-DCMAKE_TOOLCHAIN_FILE={} -DAOM_TARGET_CPU=x86_64".format(cmake_bin)
+        if self.build_static is True:
+            cmake_static_opt = '-DENABLE_STATIC_RUNTIME=1'
+        else:
+            cmake_static_opt = ''
+
+        cmake_cmd = '{} -G"Unix Makefiles" {} {} -DCMAKE_INSTALL_PREFIX={} {}'.format(
+            cmake_bin, build_folder, cmake_static_opt, self.TARGET_DIR, cmake_build_opts)
+        os.system(cmake_cmd)
+
+        os.system('make -j %s && make install' % self.cpuCount)
+        self.check_lib('libaom', 'AOM (AV1)')
+
     def build_xvid(self):
         print('\n*** Building xvid ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.xvid, 'build', 'generic'))
@@ -939,8 +967,6 @@ class ffmpeg_build:
                     confcmd += ' --enable-libnpp'           # nVidia CUDA NPP
                     confcmd += ' --nvccflags="-gencode arch=compute_61,code=sm_61 -O2"'
 
-
-
         os.system('make distclean')
         os.system(confcmd)
         os.system('make -j %s && make install' % self.cpuCount)
@@ -1026,6 +1052,7 @@ class ffmpeg_build:
         self.build_soxr()
         self.build_x264()
         self.build_x265()
+        self.build_aom()
         self.build_xvid()
         self.build_opus()
         self.build_expat()
@@ -1091,7 +1118,8 @@ if __name__ == '__main__':
         ffx.go_gcc()
     elif args.do_test is True:
         os.system('gcc --version')
-        ffx.build_cuda()
+        #ffx.build_cuda()
         #ffx.build_glib()
+        ffx.build_aom()
     else:
         ffx.run()
