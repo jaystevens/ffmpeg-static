@@ -753,18 +753,20 @@ class ffmpeg_build:
         cmake_bin = os.path.join(self.TARGET_DIR, 'bin', 'cmake')
 
         build_folder = os.path.join(self.BUILD_DIR, 'aom', 'aom_build')
+        if os.path.exists(build_folder):
+            os.system('rm -rf {}'.format(build_folder))
+
         if not os.path.exists(build_folder):
             os.makedirs(build_folder)
         os.chdir(build_folder)
 
-        cmake_build_opts = "-DCMAKE_TOOLCHAIN_FILE={} -DAOM_TARGET_CPU=x86_64".format(cmake_bin)
         if self.build_static is True:
             cmake_static_opt = '-DENABLE_STATIC_RUNTIME=1'
         else:
             cmake_static_opt = ''
 
-        cmake_cmd = '{} -G"Unix Makefiles" {} {} -DCMAKE_INSTALL_PREFIX={} {}'.format(
-            cmake_bin, build_folder, cmake_static_opt, self.TARGET_DIR, cmake_build_opts)
+        cmake_cmd = '{} -G"Unix Makefiles" {} {} -DCMAKE_INSTALL_PREFIX={} -DAOM_TARGET_CPU=x86_64'.format(
+            cmake_bin, aom_src_folder, cmake_static_opt, self.TARGET_DIR)
         os.system(cmake_cmd)
 
         os.system('make -j %s && make install' % self.cpuCount)
@@ -934,6 +936,7 @@ class ffmpeg_build:
         confcmd += ' --enable-libvpx'               # VIDEO - VP8/VP9
         confcmd += ' --enable-libx264'              # VIDEO - H264
         confcmd += ' --enable-libx265'              # VIDEO - H265/HEVC
+        confcmd += ' --enable-libaom'               # VIDEO - AV1
         confcmd += ' --enable-libsoxr'              # AUDIO - RESMAPLE
         confcmd += ' --enable-libtwolame'           # AUDIO - MP2
         confcmd += ' --enable-libfreetype'          # VF    - fonts/drawtext
@@ -1120,6 +1123,9 @@ if __name__ == '__main__':
         os.system('gcc --version')
         #ffx.build_cuda()
         #ffx.build_glib()
+        #ffx.build_cmake()
+        ffx.cflags_reset()
+        ffx.flags_cmake_gcc()
         ffx.build_aom()
     else:
         ffx.run()
