@@ -78,6 +78,9 @@ class ffmpeg_build:
         self.nasm = 'nasm-2.13.03'
         self.downloadList.append(self.nasm)
 
+        self.autoconf = 'autoconf-2.69'
+        self.downloadList.append(self.autoconf)
+
         self.openssl = 'openssl-1.0.2p'
         self.downloadList.append(self.openssl)
 
@@ -544,6 +547,13 @@ class ffmpeg_build:
         self.check_bin('curl')
         self.check_lib('libcurl', 'CURL')
 
+    def build_autoconf(self):
+        print('\n*** Building autoconf ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.autoconf))
+        os.system('./configure --prefix=%s' % (self.TARGET_DIR))
+        os.system('make -j %s && make install' % self.cpuCount)
+        self.check_bin('autoconf')
+
     def build_cmake(self):
         print('\n*** Building cmake ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.cmake))
@@ -823,6 +833,8 @@ class ffmpeg_build:
     def build_glib(self):
         print('\n*** Building glib ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.glib))
+        if not os.path.exists(os.path.join(self.BUILD_DIR, self.glib, 'configure')):
+            os.system('autoconf')
         cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
         cfgcmd += ' --enable-libmount=no'
         cfgcmd += ' --with-pcre=internal'
@@ -1034,6 +1046,7 @@ class ffmpeg_build:
     def go_main(self):
         self.cflags_reset()
         self.flags_cmake_gcc()
+        self.build_autoconf()  # build autoconf for configuring packages
         self.build_zlib()
         self.build_yasm(build_new_gcc=True)
         self.build_xz(build_new_gcc=True)
@@ -1126,6 +1139,6 @@ if __name__ == '__main__':
         #ffx.build_cmake()
         ffx.cflags_reset()
         ffx.flags_cmake_gcc()
-        ffx.build_aom()
+        ffx.build_autoconf()
     else:
         ffx.run()
