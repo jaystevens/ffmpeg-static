@@ -193,7 +193,7 @@ class ffmpeg_build:
         self.gcc_cloog = 'cloog-0.18.4'
         self.downloadList.append(self.gcc_cloog)
 
-        self.gcc_gcc = 'gcc-7.3.0'
+        self.gcc_gcc = 'gcc-8.2.0'
         self.downloadList.append(self.gcc_gcc)
 
         self.ffmpeg = 'git://source.ffmpeg.org/ffmpeg.git'
