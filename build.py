@@ -49,11 +49,11 @@ class ffmpeg_build:
         #self.cflags += ' -march=native -mtune=native'
         #self.cflags += ' -march=corei7 -mtune=corei7'
         #self.cflags += ' -march=corei7 -mtune=corei7-avx'
-        self.cflags += ' -march=nehalem -mtune=broadwell'
+        self.cflags += ' -mtune=broadwell'
         self.cflags += ' -O3'
 
         # GCC CFLAGS
-        self.ENV_CFLAGS_GCC = '-march=corei7 -mtune=corei7 -O3'
+        self.ENV_CFLAGS_GCC = '-mtune=corei7 -O3'
 
         self.CUDA_SDK = '/usr/local/cuda-9.0'
 
@@ -77,6 +77,7 @@ class ffmpeg_build:
 
         self.nasm = 'nasm-2.13.03'
         self.downloadList.append(self.nasm)
+        self.downloadAuxList.append('nasm_213.patch')
 
         self.autoconf = 'autoconf-2.69'
         self.downloadList.append(self.autoconf)
@@ -172,6 +173,9 @@ class ffmpeg_build:
         self.fribidi = 'fribidi-1.0.5'
         self.downloadList.append(self.fribidi)
 
+        self.libxml2 = 'libxml-2.9.8'
+        self.downloadList.append(self.libxml2)
+
         self.gcc_binutils = 'binutils-2.31.1'
         self.downloadList.append(self.gcc_binutils)
 
@@ -193,11 +197,12 @@ class ffmpeg_build:
         self.gcc_cloog = 'cloog-0.18.4'
         self.downloadList.append(self.gcc_cloog)
 
+        self.gcc_gcc = 'gcc-7.3.0'
         self.gcc_gcc = 'gcc-8.2.0'
         self.downloadList.append(self.gcc_gcc)
 
         self.ffmpeg = 'git://source.ffmpeg.org/ffmpeg.git'
-        #self.ffmpeg = 'https://bitbucket.org/jaystevens/ffmpeg.git'
+        self.ffmpeg = 'https://bitbucket.org/jaystevens/ffmpeg.git'
         self.gitList.append(['ffmpeg', self.ffmpeg])
 
         for item in self.downloadList:
@@ -590,6 +595,9 @@ class ffmpeg_build:
     def build_nasm(self):
         print('\n*** Building nasm ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.nasm))
+        # apply patch for 2.13 pure bullshit
+        os.system('cp -f %s ./' % os.path.join(self.SRC_TAR_DIR, 'nasm_213.patch'))
+        os.system('patch -f -p0 < nasm_213.patch')
         cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
         os.system(cfgcmd)
         os.system('make -j %s && make install' % self.cpuCount)
@@ -887,10 +895,23 @@ class ffmpeg_build:
         if os.path.exists(CUDA_SO1):
             os.system('ln -s {} {}'.format(CUDA_SO1, os.path.join(self.TARGET_DIR, 'lib64')))
 
+    def build_libxml2(self):
+        print('\n*** Building libxml2 ***\n')
+        os.chdir(os.path.join(self.BUILD_DIR, self.libxml2))
+        cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+        if self.build_static is True:
+            cfgcmd += ' --disable-shared'
+        os.system(cfgcmd)
+        os.system('make -j %s && make install' % self.cpuCount)
+        self.check_lib('libxml2', 'LIBXML2')
+
 
     def build_ffmpeg(self):
         print('\n*** Building ffmpeg ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, 'ffmpeg'))
+
+        os.system('git clean -fdx')
+        os.system('git checkout jason')
 
         self.cflags_reset()
         self.flags_cmake_gcc()
@@ -1077,6 +1098,7 @@ class ffmpeg_build:
         self.build_freetype()
         self.build_fontconfig()
         self.build_fribidi()
+        self.build_libxml2()
         self.build_cuda()
         if self.nonfree:
             self.go_main_nonfree()
