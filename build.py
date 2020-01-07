@@ -49,7 +49,8 @@ class ffmpeg_build:
         #self.cflags += ' -march=native -mtune=native'
         #self.cflags += ' -march=corei7 -mtune=corei7'
         #self.cflags += ' -march=corei7 -mtune=corei7-avx'
-        self.cflags += ' -mtune=broadwell'
+        #self.cflags += ' -mtune=broadwell'
+        self.cflags += ' -mtune=corei7'
         self.cflags += ' -O3'
 
         # GCC CFLAGS
@@ -82,13 +83,13 @@ class ffmpeg_build:
         self.autoconf = 'autoconf-2.69'
         self.downloadList.append(self.autoconf)
 
-        self.openssl = 'openssl-1.0.2p'
+        self.openssl = 'openssl-1.0.2q'
         self.downloadList.append(self.openssl)
 
-        self.curl = 'curl-7.61.0'
+        self.curl = 'curl-7.62.0'
         self.downloadList.append(self.curl)
 
-        self.cmake = 'cmake-3.12.1'
+        self.cmake = 'cmake-3.13.0'
         self.downloadList.append(self.cmake)
 
         self.zlib = 'zlib-1.2.11'
@@ -107,7 +108,7 @@ class ffmpeg_build:
         self.openjpeg = 'openjpeg-2.3.0'
         self.downloadList.append(self.openjpeg)
 
-        self.libtiff = 'tiff-4.0.9'
+        self.libtiff = 'tiff-4.0.10'
         self.downloadList.append(self.libtiff)
 
         self.libogg = 'libogg-1.3.3'
@@ -167,13 +168,13 @@ class ffmpeg_build:
         self.freetype = 'freetype-2.9.1'
         self.downloadList.append(self.freetype)
 
-        self.fontconfig = 'fontconfig-2.13.1'
+        self.fontconfig = 'fontconfig-2bd559f7'
         self.downloadList.append(self.fontconfig)
 
         self.fribidi = 'fribidi-1.0.5'
         self.downloadList.append(self.fribidi)
 
-        self.libxml2 = 'libxml-2.9.8'
+        self.libxml2 = 'libxml2-2.9.8'
         self.downloadList.append(self.libxml2)
 
         self.gcc_binutils = 'binutils-2.31.1'
@@ -290,7 +291,9 @@ class ffmpeg_build:
         self.ENV_LDFLAGS_STD = self.ENV_LDFLAGS_STD.strip()
         self.ENV_LDFLAGS = self.ENV_LDFLAGS_STD
         if self.build_static is True:
-            self.ENV_LDFLAGS += ' -static -static-libgcc -static-libstdc++'
+            self.ENV_LDFLAGS += ''
+            self.ENV_LDFLAGS += ' -static'
+            #self.ENV_LDFLAGS += ' -static-libgcc -static-libstdc++'
         os.putenv('LDFLAGS', self.ENV_LDFLAGS)
 
         # EXPORT
@@ -821,7 +824,7 @@ class ffmpeg_build:
     def build_expat(self):
         print('\n*** Building expat ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.expat))
-        cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
+        cfgcmd = './configure --without-docbook --prefix=%s' % self.TARGET_DIR
         if self.build_static is True:
             cfgcmd += ' '
         os.system(cfgcmd)
@@ -842,7 +845,7 @@ class ffmpeg_build:
         print('\n*** Building glib ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.glib))
         if not os.path.exists(os.path.join(self.BUILD_DIR, self.glib, 'configure')):
-            os.system('autoconf')
+            os.system('./autogen.sh')
         cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
         cfgcmd += ' --enable-libmount=no'
         cfgcmd += ' --with-pcre=internal'
@@ -867,6 +870,8 @@ class ffmpeg_build:
     def build_fontconfig(self):
         print('\n*** Building fontconfig ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.fontconfig))
+        if not os.path.exists(os.path.join(self.BUILD_DIR, self.fontconfig, 'configure')):
+            os.system('./autogen.sh')
         cfgcmd = './configure --disable-docs --prefix=%s' % self.TARGET_DIR
         if self.build_static is True:
             cfgcmd += ' --disable-shared'
@@ -877,11 +882,13 @@ class ffmpeg_build:
     def build_fribidi(self):
         print('\n*** Building fribidi ***\n')
         os.chdir(os.path.join(self.BUILD_DIR, self.fribidi))
+        if not os.path.exists(os.path.join(self.BUILD_DIR, self.fribidi, 'configure')):
+            os.system('./autogen.sh')
         cfgcmd = './configure --prefix=%s' % self.TARGET_DIR
         if self.build_static is True:
             cfgcmd += ' --disable-shared'
         os.system(cfgcmd)
-        os.system('make -j %s && make install' % self.cpuCount)
+        os.system('make -C lib -j %s && make -C lib install' % self.cpuCount)
         self.check_lib('libfribidi', 'FRIBIDI')
 
     def build_cuda(self):
@@ -957,7 +964,7 @@ class ffmpeg_build:
         confcmd += ' --enable-runtime-cpudetect'    # should be on all the time
         confcmd += ' --disable-doc'                 # disable building doc
         confcmd += ' --disable-ffplay'              # do not compile ffplay
-        confcmd += ' --disable-ffserver'            # do not compile ffserver
+        #confcmd += ' --disable-ffserver'            # do not compile ffserver
         confcmd += ' --enable-bzlib'                # bz2
         confcmd += ' --enable-zlib'                 # zlib
         confcmd += ' --enable-lzma'                 # lzma (xz)
@@ -972,9 +979,9 @@ class ffmpeg_build:
         confcmd += ' --enable-libaom'               # VIDEO - AV1
         confcmd += ' --enable-libsoxr'              # AUDIO - RESMAPLE
         confcmd += ' --enable-libtwolame'           # AUDIO - MP2
-        confcmd += ' --enable-libfreetype'          # VF    - fonts/drawtext
-        confcmd += ' --enable-libfontconfig'        # VF    - fonts/drawtext
-        confcmd += ' --enable-libfribidi'           # VF    - fonts/drawtext
+        #confcmd += ' --enable-libfreetype'          # VF    - fonts/drawtext
+        #confcmd += ' --enable-libfontconfig'        # VF    - fonts/drawtext
+        #confcmd += ' --enable-libfribidi'           # VF    - fonts/drawtext
         # confcmd += ' --enable-zimg'               # VF    - resize zscale
         # confcmd += ' --enable-libbluray'          # FORMAT- reading bluray
         # confcmd += ' --disable-devices'           # 
@@ -1097,7 +1104,7 @@ class ffmpeg_build:
         self.build_glib()
         self.build_freetype()
         self.build_fontconfig()
-        self.build_fribidi()
+        #self.build_fribidi()
         self.build_libxml2()
         self.build_cuda()
         if self.nonfree:
